@@ -139,10 +139,6 @@ class BNReasoner:
                     self.bn.update_cpt(i,result)
         print()
 
-        ##hiervoor heb ik elemination order nodig
-
-        #order = elimenation_order()
-
         #reduce_factor(instantiation,cpts)
         
     def marginalDistributions(self, query, evidence=dict()):
@@ -161,6 +157,9 @@ class BNReasoner:
         #print(getcompat)
 
         reducing = self.reduceNet(evidence)
+        
+        graph = self.bn.get_interaction_graph()
+        nx.all_simple_paths(graph,source=X[0],target=Y[0]))
 
         Qande = []
 
@@ -200,9 +199,7 @@ class BNReasoner:
         
         print('begin order', order)
 
-        for q in query:
-            order.remove(q)
-        #word de q er al uit gehaald?
+        order = [x for x in order if x not in query]
 
         print('later order',order)
 
@@ -213,8 +210,8 @@ class BNReasoner:
         for q in query:
             domax = self.maxingOut(q)
             self.bn.update_cpt(q, domax)
-            print(q['p'])
-            print(q['ins. of', q])
+            print(domax['p'])
+            print(domax.loc[:,'ins. of' + q])
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
@@ -239,12 +236,12 @@ class BNReasoner:
         print('what is the query', query)   
 
         for q in query:
-            print(q['p']) #this should work, right? print the p value of the query cpts
-            print(q['ins. of', q])
+
+            print(result['p']) #this should work, right? print the p value of the query cpts
+            print(result['ins. of ' + q])
         #return query['p']
         print('this is the ending cpt:', ending)
 
-        #mazimize out all variables which are not in Q and e
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -273,10 +270,12 @@ reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 #print(reasoner.marginalization("family-out",reasoner.bn.get_all_cpts()["family-out"]))
 
 #reasoner.Ordering('min-degree')
-reasoner.marginalDistributions(query = "hear-bark", evidence={"dog-out": True})
+#reasoner.marginalDistributions(query = "hear-bark", evidence={"dog-out": True})
 #reasoner.map(evidence={"dog-out": True})
 #reasoner.maxingOut(variable="family-out")
 
 #print(list(nx.all_simple_paths(reasoner.bn.structure, "family-out", "hear-bark")))
 
-#print(reasoner.map(query = "hear-bark", evidence={"dog-out": True}))
+print(reasoner.map(query = {'hear-bark'}, evidence={'dog-out': True}))
+
+
