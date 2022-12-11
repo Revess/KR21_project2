@@ -150,6 +150,9 @@ class BNReasoner:
 
 
         reducing = self.reduceNet(evidence)
+        
+        graph = self.bn.get_interaction_graph()
+        nx.all_simple_paths(graph,source=X[0],target=Y[0]))
 
         Qande = []
 
@@ -180,6 +183,7 @@ class BNReasoner:
         order = self.Ordering('min-degree')
         
         print('begin order', order)
+
         order = [x for x in order if x not in query]
 
         print('later order',order)
@@ -191,8 +195,13 @@ class BNReasoner:
         for q in query:
             domax = self.maxingOut(q)
             self.bn.update_cpt(q, domax)
+
             print(domax.loc[:,'p'])
             print(domax.loc[:,'ins. of ' + q])
+
+            print(domax['p'])
+            print(domax.loc[:,'ins. of' + q])
+
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
@@ -211,12 +220,12 @@ class BNReasoner:
         print('what is the query', query)   
 
         for q in query:
-            print(q['p']) #this should work, right? print the p value of the query cpts
-            print(q['ins. of', q])
+
+            print(result['p']) #this should work, right? print the p value of the query cpts
+            print(result['ins. of ' + q])
         #return query['p']
         print('this is the ending cpt:', ending)
 
-        #mazimize out all variables which are not in Q and e
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -233,4 +242,3 @@ class BNReasoner:
         return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-
