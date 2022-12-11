@@ -43,6 +43,10 @@ class BNReasoner:
                 self.bn.update_cpt(node, newCPT)          
 
     def maxingOut(self, variable, cpt):
+        if len([col for col in cpt.columns if 'ins. of' in col]) > 1:
+            print('Weird amount of instances columns, please check')
+            return
+
         df = cpt
         res = pd.DataFrame(columns=df.columns.drop([variable]))
 
@@ -50,9 +54,12 @@ class BNReasoner:
         sort.remove('p')
         sort.remove(variable)
 
+        len_ins = len([col for col in df.columns if 'ins. of' in col])
+        if len_ins == 1:
+            sort.remove('ins. of')
+
         df = df.sort_values(by = sort, ignore_index=True)
 
-        print('df',df)
         for i in range(len(df.iloc[:,0])):
             if i % 2 == 0:
                 max = df.loc[i:i, ['p', variable]]
@@ -61,8 +68,12 @@ class BNReasoner:
                     max = df.loc[i:i, ['p', variable]]
                 maxres = df.drop([variable, 'p'], axis=1).loc[i:i, :]
                 maxres['p'] = max.iloc[0, 0]
-                maxres['ins. of ' + variable] = max.iloc[0, 1]
+                if len_ins == 0:
+                    maxres['ins. of'] = variable + ': ' + str(max.iloc[0, 1])
+                else:
+                    maxres['ins. of'] += ', ' + variable + ': ' + str(max.iloc[0, 1])
                 res = pd.concat([res, maxres], axis=0, sort=False, ignore_index=True)
+
         return res
 
     def factorMultiplication(self, factor1, factor2):
@@ -152,7 +163,7 @@ class BNReasoner:
         reducing = self.reduceNet(evidence)
         
         graph = self.bn.get_interaction_graph()
-        nx.all_simple_paths(graph,source=X[0],target=Y[0]))
+        nx.all_simple_paths(graph,source=X[0],target=Y[0])
 
         Qande = []
 
@@ -242,3 +253,5 @@ class BNReasoner:
         return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
+x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-out'])
+
