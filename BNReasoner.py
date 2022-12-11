@@ -51,11 +51,8 @@ class BNReasoner:
         res = pd.DataFrame(columns=df.columns.drop([variable]))
 
         sort = list(df.columns)
-        print('columns',sort)
         sort.remove('p')
-        print('column wo p', sort)
         sort.remove(variable)
-        print('after remove var', sort)
 
         len_ins = len([col for col in df.columns if 'ins. of' in col])
         if len_ins == 1:
@@ -63,11 +60,9 @@ class BNReasoner:
 
         df = df.sort_values(by = sort, ignore_index=True)
 
-        print('df',df)
         for i in range(len(df.iloc[:,0])):
             if i % 2 == 0:
                 max = df.loc[i:i, ['p', variable]]
-                print('this is the max',max)
             else:
                 if df.loc[i, 'p'] > max.iloc[0, 0]:
                     max = df.loc[i:i, ['p', variable]]
@@ -84,7 +79,9 @@ class BNReasoner:
     def factorMultiplication(self, factor1, factor2):
         cpts = self.bn.get_all_cpts()
         X = cpts[factor1]
+        print(X)
         Z = cpts[factor2]
+        print(Z)
         union = list(set(X.columns).intersection(Z.columns))
         union.remove('p')
         cols = list(pd.concat([X, Z]).columns)
@@ -157,6 +154,7 @@ class BNReasoner:
         for i in order:
             if i not in query:
                 if i not in evidence.keys():
+                    #need to do factor multiplication as well
                     result = self.marginalization(1, self.bn.get_all_cpts()[i])
                     self.bn.update_cpt(i,result)
                     
@@ -186,10 +184,14 @@ class BNReasoner:
         
         Qande = list(dict.fromkeys(Qande))
 
-        doVarEl = self.variableElimination(query, evidence, Qande)
+        PrQande = self.variableElimination(query, evidence, Qande)
+        #need to get a number from this to use in the equation
+        print(PrQande)
 
         for q in query:
-            result = self.marginalization(1, self.bn.get_all_cpts()[q])
+            Pre = self.marginalization(1, self.bn.get_all_cpts()[q])
+
+        #answer = PrQande / Pre
 
 
         #neededcpts = {}
@@ -225,13 +227,14 @@ class BNReasoner:
         print(order)
 
         for i in order:
-            result = self.marginalization(i, self.bn.get_all_cpts()[i])
+            result = self.marginalization(i, self.bn.get_all_cpts()[i]) #can't check, marginalization doet het nog niet goed
             print('with marg:',result)
             self.bn.update_cpt(i, result)
 
         for q in query:
             domax = self.maxingOut(q, self.bn.get_all_cpts()[q])
             self.bn.update_cpt(q, domax)
+            print(self.bn.get_cpt(q))
 
         print(domax.loc[:,'p'])
         print(domax.loc[:,'ins. of'])
@@ -241,26 +244,48 @@ class BNReasoner:
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
-    def mpe(self, query, evidence=dict()):
+    def mpe(self, query=dict, evidence=dict()):
         order = self.Ordering('min-degree')
-        ending = []
+        cpts = self.bn.get_all_cpts()
+        instantiation = pd.Series(evidence)
+        print(order)
+
+        '''for i in cpts:
+            reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
+            self.bn.update_cpt(i, reducing)
+            print(reducing)'''
+
+        for i in cpts:
+            reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
+            self.bn.update_cpt(i, reducing)
+            print(reducing)
+        
+        prunednetwork = self.pruneNetwork(evidence)
 
         for i in order:
-            if i not in query:
-                if i not in evidence.keys():
-                    result = self.maxingOut(i, self.bn.get_all_cpts()[i])
-                    self.bn.update_cpt(i, result)
-                    print('this is the cpt:', result)
-                    ending.append(result)
+            if i not in evidence.keys():
+                print(cpts.items())
+                fks = [key for key, cpt in cpts.items() if i in cpt.columns]
+                print('thefks', fks)
+                fks_cpt = [cpts[key] for key in fks]
+                f = self.factorMultiplication(fks_cpt)
+                result = self.maxingOut(f, self.bn.get_all_cpts()[i])
+                #need to do factormultiplication as well, how do i know when?
+                '''if len(result.index) == 1:
+                    for q in cpts:
+                        if i in '''
+                #bij alle cpts moet worden meegegeven dat wanneer het een enkele heeft, deze true/false is bij de rest
+                print(result)
+                self.bn.update_cpt(i, result)
 
-        print('what is the query', query)   
+        '''print('what is the query', query)   
 
         for q in query:
 
             print(result.loc[:,'p'])
             print(result.loc[:,'ins. of'])
         #return query['p']
-        print('this is the ending cpt:', ending)
+        print('this is the ending cpt:', ending)'''
 
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
@@ -285,9 +310,9 @@ x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-
 #print(reasoner.marginalization('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.maxingOut('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
-#print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
+print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
 #print(reasoner.variableElimination(query = {'dog-out'}, evidence={'dog-out': True}))
 
-x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
-y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
-z = reasoner.maxingOut(variable='family-out', cpt=y)
+#x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
+#y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
+#z = reasoner.maxingOut(variable='family-out', cpt=y)
