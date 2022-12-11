@@ -42,11 +42,17 @@ class BNReasoner:
                 newCPT = newCPT[newCPT.p != 0]
                 self.bn.update_cpt(node, newCPT)          
 
-    def maxingOut(self, variable):
-        cpts = self.bn.get_all_cpts()
-        df = cpts[variable]
+    def maxingOut(self, variable, cpt):
+        df = cpt
         res = pd.DataFrame(columns=df.columns.drop([variable]))
 
+        sort = list(df.columns)
+        sort.remove('p')
+        sort.remove(variable)
+
+        df = df.sort_values(by = sort, ignore_index=True)
+
+        print('df',df)
         for i in range(len(df.iloc[:,0])):
             if i % 2 == 0:
                 max = df.loc[i:i, ['p', variable]]
@@ -139,26 +145,9 @@ class BNReasoner:
                     self.bn.update_cpt(i,result)
         print()
 
-        ##hiervoor heb ik elemination order nodig
-
-        #order = elimenation_order()
-
-        #reduce_factor(instantiation,cpts)
-        
     def marginalDistributions(self, query, evidence=dict()):
-        #print(evidence)
         cpts = self.bn.get_all_cpts()
-        instantiation = pd.Series(evidence)
-        print(cpts)
-        #self.bn.draw_structure()
-        #print(cpts)
 
-        #reduced_factors = self.bn.reduce_factor(instantiation, cpts)
-        #result = self.bn.get_all_cpts(reduced_factors)
-        #print(result)
-        #dataframes = self.bn.get_interaction_graph().nodes
-        #getcompat = self.bn.get_compatible_instantiations_table(instantiation,self)
-        #print(getcompat)
 
         reducing = self.reduceNet(evidence)
 
@@ -185,24 +174,13 @@ class BNReasoner:
 
         for q in query:
             result = self.marginalization(q, )
-        
 
-
-
-    def map(self, query, evidence=dict()):
-        #print(evidence)
-        #cpts = self.bn.get_all_cpts()
-        #instantiation = pd.Series(evidence)
-        #self.bn.draw_structure()
-        #print(cpts)
+    def mapping(self, query, evidence=dict()):
         
         order = self.Ordering('min-degree')
         
         print('begin order', order)
-
-        for q in query:
-            order.remove(q)
-        #word de q er al uit gehaald?
+        order = [x for x in order if x not in query]
 
         print('later order',order)
 
@@ -213,18 +191,12 @@ class BNReasoner:
         for q in query:
             domax = self.maxingOut(q)
             self.bn.update_cpt(q, domax)
-            print(q['p'])
-            print(q['ins. of', q])
+            print(domax.loc[:,'p'])
+            print(domax.loc[:,'ins. of ' + q])
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
     def mpe(self, query, evidence=dict()):
-        #print(evidence)
-        #cpts = self.bn.get_all_cpts()
-        #instantiation = pd.Series(evidence)
-        #self.bn.draw_structure()
-        #print(cpts)
-
         order = self.Ordering('min-degree')
         ending = []
 
@@ -261,22 +233,4 @@ class BNReasoner:
         return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-#reasoner.pruneNetwork(evidence={"dog-out": True})
-#print(reasoner.independence(["hear-bark"],["family-out"],["hear-bark"]))
-#print(reasoner.bn.get_interaction_graph().nodes)
-# reasoner.bn.draw_structure()
-#print(list(nx.all_simple_paths(reasoner.bn.structure,"family-out","hear-bark")))
-#reasoner.pruneNetwork(evidence={"dog-out": True})
-#reasoner.variable_elimination(evidence={"dog-out": True})
-# reasoner.Ordering('min-degree')
 
-#print(reasoner.marginalization("family-out",reasoner.bn.get_all_cpts()["family-out"]))
-
-#reasoner.Ordering('min-degree')
-reasoner.marginalDistributions(query = "hear-bark", evidence={"dog-out": True})
-#reasoner.map(evidence={"dog-out": True})
-#reasoner.maxingOut(variable="family-out")
-
-#print(list(nx.all_simple_paths(reasoner.bn.structure, "family-out", "hear-bark")))
-
-#print(reasoner.map(query = "hear-bark", evidence={"dog-out": True}))
