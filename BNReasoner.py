@@ -149,8 +149,6 @@ class BNReasoner:
         print(evidence)
         cpts = self.bn.get_all_cpts()
         instantiation = pd.Series(evidence)
-        self.bn.draw_structure()
-        print(cpts)
 
         order = self.Ordering('min-degree')
         for x in elements:
@@ -172,7 +170,7 @@ class BNReasoner:
             self.bn.update_cpt(i, reducing)
 
         graph = self.bn.get_interaction_graph()
-        nx.all_simple_paths(graph,source=X[0],target=Y[0]))
+        #nx.all_simple_paths(graph,source=X[0],target=Y[0]))
 
         Qande = []
 
@@ -236,11 +234,10 @@ class BNReasoner:
             self.bn.update_cpt(q, domax)
 
         print(domax.loc[:,'p'])
-        print(domax.loc[:,'ins. of ' + q])
+        print(domax.loc[:,'ins. of'])
 
             #print(domax['p'])
             #print(domax.loc[:,'ins. of' + q])
-
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
@@ -261,7 +258,7 @@ class BNReasoner:
         for q in query:
 
             print(result.loc[:,'p'])
-            print(result.loc[:,'ins. of ' + q])
+            print(result.loc[:,'ins. of'])
         #return query['p']
         print('this is the ending cpt:', ending)
 
@@ -288,4 +285,9 @@ x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-
 #print(reasoner.marginalization('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.maxingOut('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
-print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
+#print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
+#print(reasoner.variableElimination(query = {'dog-out'}, evidence={'dog-out': True}))
+
+x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
+y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
+z = reasoner.maxingOut(variable='family-out', cpt=y)
