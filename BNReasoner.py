@@ -320,8 +320,7 @@ class BNReasoner:
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-out'])
-
-
+# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
 #print(reasoner.mapping(query = {'dog-out'}, evidence = {'hear-bark': True}))
 #print(reasoner.marginalization('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.maxingOut('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
