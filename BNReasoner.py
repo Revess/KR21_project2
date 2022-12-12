@@ -18,7 +18,7 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def pruneNetwork(self, evidence=dict()):
+    def pruneNetwork(self, evidence=dict()): #leaf nodes die in Q voorkomen mogen toch ook niet gedelete worden? Moet hier geen rekening mee gehouden worden
         cpts = self.bn.get_all_cpts()
         # remove edges
         for node in cpts.keys():
@@ -248,7 +248,6 @@ class BNReasoner:
         order = self.Ordering('min-degree')
         cpts = self.bn.get_all_cpts()
         instantiation = pd.Series(evidence)
-        print(order)
 
         '''for i in cpts:
             reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
@@ -258,22 +257,28 @@ class BNReasoner:
         for i in cpts:
             reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
             self.bn.update_cpt(i, reducing)
-            print(reducing)
         
         prunednetwork = self.pruneNetwork(evidence)
+        #self.bn.draw_structure() #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
+        network = copy.deepcopy(prunednetwork) 
+        print(network)
+        network.to_dict() #wil hiervan een dictionary maken om erover te loopen, dit is methode met 1 dataframe vgm
+        networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
+        print(network)
 
         for i in order:
             if i not in evidence.keys():
-                print(cpts.items())
                 #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
                 #als hij niet voorkomt, dan maxingout of that variable
-                if i not in cpts.iloc[:,0]: #wil over alle column namen itereren, behalve die van zichzelf
-                    result = self.maxingOut(i, self.bn.get_all_cpts()[i])
-                    order = order.remove(i)
-                elif i in cpts.iloc[:,0]:
-                    print(cpts.iloc[:,0])
-                    #result = reasoner.factorMultiplication(i, )
-                    #moet hier naar de specifieke cpts refereren voor factor multiplication
+                for q in network.keys():
+                    if i is not q:
+                        if i in network[q].columns:
+                            result = self.factorMultiplication(i, q)
+                            self.bn.update_cpt(result)
+                        else:
+                            answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
+                            network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
+                            self.bn.update_cpt(answer)
 
 
                 #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
@@ -324,6 +329,13 @@ print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
 #print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
 #print(reasoner.variableElimination(query = {'dog-out'}, evidence={'dog-out': True}))
 
-#x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
-#y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
-#z = reasoner.maxingOut(variable='family-out', cpt=y)
+'''x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
+reasoner.bn.update_cpt('dog-out', x)
+print(x)
+y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
+reasoner.bn.update_cpt('dog-out', y)
+print(y)
+z = reasoner.maxingOut(variable='family-out', cpt=y)
+reasoner.bn.update_cpt('dog-out', z)
+print(z)
+print(reasoner.bn.get_all_cpts()['dog-out'])'''
