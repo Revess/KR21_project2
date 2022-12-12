@@ -265,11 +265,22 @@ class BNReasoner:
         for i in order:
             if i not in evidence.keys():
                 print(cpts.items())
-                fks = [key for key, cpt in cpts.items() if i in cpt.columns]
-                print('thefks', fks)
-                fks_cpt = [cpts[key] for key in fks]
-                f = self.factorMultiplication(fks_cpt)
-                result = self.maxingOut(f, self.bn.get_all_cpts()[i])
+                #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
+                #als hij niet voorkomt, dan maxingout of that variable
+                if i not in cpts.iloc[:,0]: #wil over alle column namen itereren, behalve die van zichzelf
+                    result = self.maxingOut(i, self.bn.get_all_cpts()[i])
+                    order = order.remove(i)
+                elif i in cpts.iloc[:,0]:
+                    print(cpts.iloc[:,0])
+                    #result = reasoner.factorMultiplication(i, )
+                    #moet hier naar de specifieke cpts refereren voor factor multiplication
+
+
+                #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
+                #print('thefks', fks)
+                #fks_cpt = [cpts[key] for key in fks]
+                #f = self.factorMultiplication(fks_cpt)
+                
                 #need to do factormultiplication as well, how do i know when?
                 '''if len(result.index) == 1:
                     for q in cpts:
@@ -309,8 +320,8 @@ x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-
 #print(reasoner.mapping(query = {'dog-out'}, evidence = {'hear-bark': True}))
 #print(reasoner.marginalization('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
 #print(reasoner.maxingOut('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
-#print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
-print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
+print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
+#print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
 #print(reasoner.variableElimination(query = {'dog-out'}, evidence={'dog-out': True}))
 
 #x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
