@@ -157,7 +157,7 @@ class BNReasoner:
             if i not in query:
                 if i not in evidence.keys():
                     #need to do factor multiplication as well
-                    result = self.marginalization(1, self.bn.get_all_cpts()[i])
+                    result = self.marginalization(self.bn.get_all_cpts()[i])
                     self.bn.update_cpt(i,result)
                     
     def marginalDistributions(self, query=list(), evidence=list()):
@@ -190,7 +190,7 @@ class BNReasoner:
         print(PrQande)
 
         for q in query:
-            Pre = self.marginalization(1, self.bn.get_all_cpts()[q])
+            Pre = self.marginalization(self.bn.get_all_cpts()[q])
 
         #answer = PrQande / Pre
 
@@ -244,7 +244,7 @@ class BNReasoner:
 
         #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
 
-    def mpe(self, query=dict, evidence=dict()):
+    def mpe(self, query=list(), evidence=dict()):
         order = self.Ordering('min-degree')
         cpts = self.bn.get_all_cpts()
         instantiation = pd.Series(evidence)
@@ -258,27 +258,37 @@ class BNReasoner:
             reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
             self.bn.update_cpt(i, reducing)
         
-        prunednetwork = self.pruneNetwork(evidence)
-        #self.bn.draw_structure() #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
-        network = copy.deepcopy(prunednetwork) 
+        prunednetwork = self.pruneNetwork(evidence=evidence)
+        #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
+        prunedcpts = self.bn.get_all_cpts()
+        network = copy.deepcopy(prunedcpts) 
+        #networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
         print(network)
-        network.to_dict() #wil hiervan een dictionary maken om erover te loopen, dit is methode met 1 dataframe vgm
-        networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
-        print(network)
+        mpe = pd.DataFrame()
 
         for i in order:
-            if i not in evidence.keys():
-                #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
-                #als hij niet voorkomt, dan maxingout of that variable
-                for q in network.keys():
-                    if i is not q:
-                        if i in network[q].columns:
-                            result = self.factorMultiplication(i, q)
-                            self.bn.update_cpt(result)
-                        else:
-                            answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
-                            network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
-                            self.bn.update_cpt(answer)
+            incpts = [prunedcpts.pop(key) for key, cpt in network.items() if i in cpt]
+
+            if len(incpts) > 1:
+                for q in range(incpts):
+                    factor = self.factorMultiplication(incpts[q],incpts[q+1])
+            else:
+                maximize = self.maxingOut(incpts)
+
+        # for i in order:
+        #         #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
+        #         #als hij niet voorkomt, dan maxingout of that variable
+        #     for q in network.keys():
+        #         if i != q:
+        #             if i in network[q].columns:
+        #                 result = self.factorMultiplication(i, q)
+        #                 self.bn.update_cpt(result)
+        #                 mpe = result
+        #             else:
+        #                 answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
+        #                 network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
+        #                 self.bn.update_cpt(answer)
+        #                 mpe = answer
 
 
                 #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
@@ -291,9 +301,7 @@ class BNReasoner:
                     for q in cpts:
                         if i in '''
                 #bij alle cpts moet worden meegegeven dat wanneer het een enkele heeft, deze true/false is bij de rest
-                print(result)
-                self.bn.update_cpt(i, result)
-
+                
         '''print('what is the query', query)   
 
         for q in query:
@@ -322,4 +330,5 @@ class BNReasoner:
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(0,False).replace(2,True).drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-reasoner.marginalization(reasoner.bn.get_all_cpts()["dog-out"])
+#reasoner.marginalization(reasoner.bn.get_all_cpts()["dog-out"])
+print(reasoner.mpe(query=['dog-out'],evidence={'dog-out': True}))
