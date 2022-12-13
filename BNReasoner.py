@@ -18,21 +18,23 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def pruneNetwork(self, evidence=dict()): #leaf nodes die in Q voorkomen mogen toch ook niet gedelete worden? Moet hier geen rekening mee gehouden worden
+    def pruneNetwork(self, Q=list(), evidence=dict()): #leaf nodes die in Q voorkomen mogen toch ook niet gedelete worden? Moet hier geen rekening mee gehouden worden
+        # Q is list van values.
         cpts = self.bn.get_all_cpts()
         # remove edges
         for node in cpts.keys():
             for ev in [ev for ev in evidence if ev in cpts[node].keys() and ev != list(cpts[node].keys())[-2]]: # Make sure the evidence is in the node and that the node is not the evidence itself
-                new_cpt = cpts[node][cpts[node][ev] == evidence[ev]]
-                new_cpt = new_cpt.drop(ev,axis=1)
-                self.bn.update_cpt(node, new_cpt)
-                # Delete the edge itself
-                self.bn.del_edge((ev,list(cpts[node].keys())[-2]))
-                # Now also remove the node
-                if len(self.bn.get_children(node)) == 0 and len(new_cpt[node].keys()) == 2 and len(self.bn.get_parents(node)) == 0:
-                    self.bn.del_var(node)
-                if len(self.bn.get_children(ev)) == 0 and len(self.bn.get_parents(ev)) == 0:
-                    self.bn.del_var(ev)
+                if node not in Q:
+                    new_cpt = cpts[node][cpts[node][ev] == evidence[ev]]
+                    new_cpt = new_cpt.drop(ev,axis=1)
+                    self.bn.update_cpt(node, new_cpt)
+                    # Delete the edge itself
+                    self.bn.del_edge((ev,list(cpts[node].keys())[-2]))
+                    # Now also remove the node
+                    if len(self.bn.get_children(node)) == 0 and len(new_cpt[node].keys()) == 2 and len(self.bn.get_parents(node)) == 0:
+                        self.bn.del_var(node)
+                    if len(self.bn.get_children(ev)) == 0 and len(self.bn.get_parents(ev)) == 0:
+                        self.bn.del_var(ev)
 
     def reduceNet(self, evidence=dict()):
         cpts = self.bn.get_all_cpts()
@@ -158,7 +160,6 @@ class BNReasoner:
                     result = self.marginalization(1, self.bn.get_all_cpts()[i])
                     self.bn.update_cpt(i,result)
                     
-
     def marginalDistributions(self, query=list(), evidence=list()):
         cpts = self.bn.get_all_cpts()
         instantiation = pd.Series(evidence)
@@ -217,7 +218,6 @@ class BNReasoner:
                 nodes.append(routes.values())
 
         print(nodes)'''
-
 
     def mapping(self, query=dict(), evidence=dict()):
         
@@ -315,26 +315,11 @@ class BNReasoner:
     def independence(self, X=list(), Y=list(), Z=list()):
         return not self.dSeperation(X,Y,Z)
 
-    def marginalization(self, X, cpt):
-        return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
+    # def marginalization(self, cpt):
+        # return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
+
+    def marginalization(self, cpt=pd.DataFrame()):
+        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(0,False).replace(2,True).drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-x = reasoner.maxingOut(variable='dog-out',cpt = reasoner.bn.get_all_cpts()['dog-out'])
-# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-#print(reasoner.mapping(query = {'dog-out'}, evidence = {'hear-bark': True}))
-#print(reasoner.marginalization('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
-#print(reasoner.maxingOut('dog-out', reasoner.bn.get_all_cpts()['dog-out']))
-print(reasoner.mpe(query = {'dog-out'}, evidence = {'hear-bark': True}))
-#print(reasoner.marginalDistributions(query = {'dog-out'}, evidence = {'dog-out': True}))
-#print(reasoner.variableElimination(query = {'dog-out'}, evidence={'dog-out': True}))
-
-'''x = reasoner.maxingOut(variable='dog-out', cpt=reasoner.bn.get_all_cpts()['dog-out'])
-reasoner.bn.update_cpt('dog-out', x)
-print(x)
-y = reasoner.maxingOut(variable='bowel-problem', cpt=x)
-reasoner.bn.update_cpt('dog-out', y)
-print(y)
-z = reasoner.maxingOut(variable='family-out', cpt=y)
-reasoner.bn.update_cpt('dog-out', z)
-print(z)
-print(reasoner.bn.get_all_cpts()['dog-out'])'''
+reasoner.marginalization(reasoner.bn.get_all_cpts()["dog-out"])
