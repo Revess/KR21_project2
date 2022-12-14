@@ -80,10 +80,15 @@ class BNReasoner:
 
     def factorMultiplication(self, factor1, factor2):
         cpts = self.bn.get_all_cpts()
-        X = cpts[factor1]
-        print(X)
-        Z = cpts[factor2]
-        print(Z)
+        if type(factor1) == type(str()):
+            X = cpts[factor1]
+        else:
+            X = factor1
+
+        if type(factor2) == type(str()):
+            Z = cpts[factor2]
+        else: 
+            Z = factor2
         union = list(set(X.columns).intersection(Z.columns))
         union.remove('p')
         cols = list(pd.concat([X, Z]).columns)
@@ -144,22 +149,18 @@ class BNReasoner:
         else:
             print('wrong heuristic chosen, pick either min-degree or min-fill')
 
-    def variableElimination(self, query=dict(), evidence=dict(), elements=list()):
-        print(evidence)
+    def variableElimination(self, query=list(), evidence=dict()):
+        self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
-        instantiation = pd.Series(evidence)
+        order = [var for var in self.Ordering('min-degree') if var not in query]
+        processed = {}
+        func = []
+        for var in order:
+            func = func + [self.marginalization(cpt) for cpt in [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]] ##SUM-OUT over the values
+            while len(func) > 1:
+                func = [f1 if f2.shape[0] == 1 else f2 if f1.shape[0] == 1 else self.factorMultiplication(f1,f2) for f1, f2 in zip(func[::2],func[1::2])]
+        return func[0]
 
-        order = self.Ordering('min-degree')
-        for x in elements:
-            order.remove(x)
-
-        for i in order:
-            if i not in query:
-                if i not in evidence.keys():
-                    #need to do factor multiplication as well
-                    result = self.marginalization(self.bn.get_all_cpts()[i])
-                    self.bn.update_cpt(i,result)
-                    
     def marginalDistributions(self, query=list(), evidence=list()):
         cpts = self.bn.get_all_cpts()
         instantiation = pd.Series(evidence)
@@ -311,7 +312,6 @@ class BNReasoner:
         #return query['p']
         print('this is the ending cpt:', ending)'''
 
-
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
         [graph.remove_node(z) for z in Z]
@@ -323,12 +323,9 @@ class BNReasoner:
     def independence(self, X=list(), Y=list(), Z=list()):
         return not self.dSeperation(X,Y,Z)
 
-    # def marginalization(self, cpt):
-        # return cpt.groupby([value for value in list(cpt.columns) if value in self.bn.get_all_variables()])['p'].sum().reset_index()
-
     def marginalization(self, cpt=pd.DataFrame()):
-        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(0,False).replace(2,True).drop(cpt.columns[-2],axis=1)
+        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-#reasoner.marginalization(reasoner.bn.get_all_cpts()["dog-out"])
-print(reasoner.mpe(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.mpe(query=['dog-out'],evidence={'dog-out': True}))
+print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
