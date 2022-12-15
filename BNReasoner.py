@@ -161,63 +161,10 @@ class BNReasoner:
         return func[0]
 
     def marginalDistributions(self, query=list(), evidence=list()):
-        cpts = self.bn.get_all_cpts()
-        instantiation = pd.Series(evidence)
-
-        for i in cpts:
-            reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
-            self.bn.update_cpt(i, reducing)
-
-        graph = self.bn.get_interaction_graph()
-        #nx.all_simple_paths(graph,source=X[0],target=Y[0]))
-
-        Qande = []
-
-        for node in cpts.keys():
-            for q in query:
-                if q in self.bn.get_all_cpts()[node].iloc[0]:
-                    Qande.append(node)
-
-        for node in cpts.keys():
-            for e in evidence.keys():
-                if e in self.bn.get_all_cpts()[node].iloc[0]:
-                    Qande.append(node)
-        
-        Qande = list(dict.fromkeys(Qande))
-
-        PrQande = self.variableElimination(query, evidence, Qande)
-        #need to get a number from this to use in the equation
-        print(PrQande)
-
-        for q in query:
-            Pre = self.marginalization(self.bn.get_all_cpts()[q])
-
-        #answer = PrQande / Pre
-
-
-        #neededcpts = {}
-
-        #for item in Qande:
-        #   neededcpts[item] = self.bn.get_cpt(item)
-
-        #have to use order with the only the cpts I got, can I give them to this function?
-
-        #for q in query:
-        #    result = self.marginalization(q, )
-
-        '''for q in query:
-            for e in evidence.keys():
-                routes = list(nx.all_simple_paths(graph,source=query,target=evidence))
-                print(routes)'''
-        
-        '''routes = self.bn.get_interaction_graph().adj
-
-        nodes = []
-        for item in routes.keys():
-            if item in query:
-                nodes.append(routes.values())
-
-        print(nodes)'''
+        self.pruneNetwork(Q=query, evidence=evidence)
+        factors = self.variableElimination(query=query, evidence=evidence)
+        factors['p'] = factors['p'] / factors['p'].sum()
+        return factors
 
     def mapping(self, query=dict(), evidence=dict()):
         order = self.Ordering('min-degree')
@@ -246,75 +193,6 @@ class BNReasoner:
         factor = self.variableElimination(query=query,evidence=evidence)
         return factor['p'].values[0], factor.drop('p', axis=1).to_dict('records')[0]
 
-
-        '''
-            # order = self.Ordering('min-degree')
-            # cpts = self.bn.get_all_cpts()
-            # instantiation = pd.Series(evidence)
-
-            # for i in cpts:
-            #     reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
-            #     self.bn.update_cpt(i, reducing)
-            #     print(reducing)
-
-            # for i in cpts:
-            #     reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
-            #     self.bn.update_cpt(i, reducing)
-            
-            # prunednetwork = self.pruneNetwork(evidence=evidence)
-            # #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
-            # prunedcpts = self.bn.get_all_cpts()
-            # network = copy.deepcopy(prunedcpts) 
-            # #networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
-            # print(network)
-            # mpe = pd.DataFrame()
-
-            # for i in order:
-            #     incpts = [prunedcpts.pop(key) for key, cpt in network.items() if i in cpt]
-
-            #     if len(incpts) > 1:
-            #         for q in range(incpts):
-            #             factor = self.factorMultiplication(incpts[q],incpts[q+1])
-            #     else:
-            #         maximize = self.maxingOut(incpts)
-
-            # for i in order:
-            #         #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
-            #         #als hij niet voorkomt, dan maxingout of that variable
-            #     for q in network.keys():
-            #         if i != q:
-            #             if i in network[q].columns:
-            #                 result = self.factorMultiplication(i, q)
-            #                 self.bn.update_cpt(result)
-            #                 mpe = result
-            #             else:
-            #                 answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
-            #                 network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
-            #                 self.bn.update_cpt(answer)
-            #                 mpe = answer
-
-
-            #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
-            #print('thefks', fks)
-            #fks_cpt = [cpts[key] for key in fks]
-            #f = self.factorMultiplication(fks_cpt)
-            
-            #need to do factormultiplication as well, how do i know when?
-            if len(result.index) == 1:
-                for q in cpts:
-                    if i in
-            #bij alle cpts moet worden meegegeven dat wanneer het een enkele heeft, deze true/false is bij de rest
-                    
-            print('what is the query', query)   
-
-            for q in query:
-
-                print(result.loc[:,'p'])
-                print(result.loc[:,'ins. of'])
-            #return query['p']
-            print('this is the ending cpt:', ending)
-        '''
-
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
         [graph.remove_node(z) for z in Z]
@@ -329,7 +207,14 @@ class BNReasoner:
     def marginalization(self, cpt=pd.DataFrame()):
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
-reasoner = BNReasoner("./testing/dog_problem.BIFXML")
+# reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 # print(reasoner.mpe(query=['dog-out'],evidence={'family-out': True}))
-print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
+
+reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+print(reasoner.mpe(query=['traffic'],evidence={'sick': True}))
+# print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
