@@ -153,7 +153,6 @@ class BNReasoner:
         self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
         order = [var for var in self.Ordering('min-degree') if var not in query]
-        processed = {}
         func = []
         for var in order:
             func = func + [self.marginalization(cpt) for cpt in [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]] ##SUM-OUT over the values
@@ -221,7 +220,6 @@ class BNReasoner:
         print(nodes)'''
 
     def mapping(self, query=dict(), evidence=dict()):
-        
         order = self.Ordering('min-degree')
 
         order = [x for x in order if x not in query]
@@ -240,77 +238,82 @@ class BNReasoner:
         print(domax.loc[:,'p'])
         print(domax.loc[:,'ins. of'])
 
-            #print(domax['p'])
-            #print(domax.loc[:,'ins. of' + q])
-
-        #compute P(Q,e) first with variable elimination, then maximize-out Q using extended variables
+    def map(self, query=list(), evidence=dict()):
+        return self.marginalization(self.variableElimination(query=query,evidence=evidence))
 
     def mpe(self, query=list(), evidence=dict()):
-        order = self.Ordering('min-degree')
-        cpts = self.bn.get_all_cpts()
-        instantiation = pd.Series(evidence)
-
-        '''for i in cpts:
-            reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
-            self.bn.update_cpt(i, reducing)
-            print(reducing)'''
-
-        for i in cpts:
-            reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
-            self.bn.update_cpt(i, reducing)
-        
-        prunednetwork = self.pruneNetwork(evidence=evidence)
-        #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
-        prunedcpts = self.bn.get_all_cpts()
-        network = copy.deepcopy(prunedcpts) 
-        #networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
-        print(network)
-        mpe = pd.DataFrame()
-
-        for i in order:
-            incpts = [prunedcpts.pop(key) for key, cpt in network.items() if i in cpt]
-
-            if len(incpts) > 1:
-                for q in range(incpts):
-                    factor = self.factorMultiplication(incpts[q],incpts[q+1])
-            else:
-                maximize = self.maxingOut(incpts)
-
-        # for i in order:
-        #         #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
-        #         #als hij niet voorkomt, dan maxingout of that variable
-        #     for q in network.keys():
-        #         if i != q:
-        #             if i in network[q].columns:
-        #                 result = self.factorMultiplication(i, q)
-        #                 self.bn.update_cpt(result)
-        #                 mpe = result
-        #             else:
-        #                 answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
-        #                 network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
-        #                 self.bn.update_cpt(answer)
-        #                 mpe = answer
+        self.pruneNetwork(Q=query, evidence=evidence)
+        factor = self.variableElimination(query=query,evidence=evidence)
+        return factor['p'].values[0], factor.drop('p', axis=1).to_dict('records')[0]
 
 
-                #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
-                #print('thefks', fks)
-                #fks_cpt = [cpts[key] for key in fks]
-                #f = self.factorMultiplication(fks_cpt)
-                
-                #need to do factormultiplication as well, how do i know when?
-                '''if len(result.index) == 1:
-                    for q in cpts:
-                        if i in '''
-                #bij alle cpts moet worden meegegeven dat wanneer het een enkele heeft, deze true/false is bij de rest
-                
-        '''print('what is the query', query)   
+        '''
+            # order = self.Ordering('min-degree')
+            # cpts = self.bn.get_all_cpts()
+            # instantiation = pd.Series(evidence)
 
-        for q in query:
+            # for i in cpts:
+            #     reducing = self.bn.reduce_factor(instantiation, self.bn.get_all_cpts()[i])
+            #     self.bn.update_cpt(i, reducing)
+            #     print(reducing)
 
-            print(result.loc[:,'p'])
-            print(result.loc[:,'ins. of'])
-        #return query['p']
-        print('this is the ending cpt:', ending)'''
+            # for i in cpts:
+            #     reducing = self.bn.get_compatible_instantiations_table(instantiation, self.bn.get_all_cpts()[i])
+            #     self.bn.update_cpt(i, reducing)
+            
+            # prunednetwork = self.pruneNetwork(evidence=evidence)
+            # #er wordt nog steeds dezelfde bn geprint, dit moet toch de pruned zijn?
+            # prunedcpts = self.bn.get_all_cpts()
+            # network = copy.deepcopy(prunedcpts) 
+            # #networkdic = {"df{}".format(i): dict(network.values.tolist()) for i, cpts in enumerate([network], start=1)}
+            # print(network)
+            # mpe = pd.DataFrame()
+
+            # for i in order:
+            #     incpts = [prunedcpts.pop(key) for key, cpt in network.items() if i in cpt]
+
+            #     if len(incpts) > 1:
+            #         for q in range(incpts):
+            #             factor = self.factorMultiplication(incpts[q],incpts[q+1])
+            #     else:
+            #         maximize = self.maxingOut(incpts)
+
+            # for i in order:
+            #         #als de variabele in een kolom voorkomt, dan moet er factormultiplication gedaan worden met die cpts
+            #         #als hij niet voorkomt, dan maxingout of that variable
+            #     for q in network.keys():
+            #         if i != q:
+            #             if i in network[q].columns:
+            #                 result = self.factorMultiplication(i, q)
+            #                 self.bn.update_cpt(result)
+            #                 mpe = result
+            #             else:
+            #                 answer = self.maxingOut(i, self.bn.get_all_cpts()[i])
+            #                 network.pop(i) #de cpts moet worden verwijderd zodat ie er niet meer over itereert
+            #                 self.bn.update_cpt(answer)
+            #                 mpe = answer
+
+
+            #fks = [key for key, cpt in cpts.items() if i in cpt.columns]
+            #print('thefks', fks)
+            #fks_cpt = [cpts[key] for key in fks]
+            #f = self.factorMultiplication(fks_cpt)
+            
+            #need to do factormultiplication as well, how do i know when?
+            if len(result.index) == 1:
+                for q in cpts:
+                    if i in
+            #bij alle cpts moet worden meegegeven dat wanneer het een enkele heeft, deze true/false is bij de rest
+                    
+            print('what is the query', query)   
+
+            for q in query:
+
+                print(result.loc[:,'p'])
+                print(result.loc[:,'ins. of'])
+            #return query['p']
+            print('this is the ending cpt:', ending)
+        '''
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -327,5 +330,6 @@ class BNReasoner:
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-# print(reasoner.mpe(query=['dog-out'],evidence={'dog-out': True}))
-print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
+# print(reasoner.mpe(query=['dog-out'],evidence={'family-out': True}))
+print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
