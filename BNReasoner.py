@@ -211,7 +211,8 @@ class BNReasoner:
         # self.bn.draw_structure()
         self.reduceNet(evidence=evidence)
         cpts = self.bn.get_all_cpts()
-        order = [x for x in self.Ordering('min-degree') if x not in list(evidence.keys())]
+        # order = [x for x in self.Ordering('min-degree') if x not in list(evidence.keys())]
+        order = self.Ordering('min-degree')
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
@@ -221,9 +222,12 @@ class BNReasoner:
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
             func = func[0]
+            print(func)
             func = self.maxingOut(variable=var, cpt=func)
+            print(func)
             cpts[funcKeys[0]] = func
         cpt = [x for k,x in cpts.items()][0]
+        print(cpt)
         try:
             return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
         except:
@@ -248,7 +252,10 @@ class BNReasoner:
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
+# print(reasoner.mpe(evidence={'dog-out': True}))
 print(reasoner.mpe(evidence={'bowel-problem': True}))
+
+
 # print(reasoner.map(query=['dog-out', 'hear-bark'],evidence={'family-out': True}))
 # print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
