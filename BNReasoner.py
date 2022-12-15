@@ -78,30 +78,53 @@ class BNReasoner:
 
         return res
 
-    def factorMultiplication(self, factor1, factor2):
-        cpts = self.bn.get_all_cpts()
-        if type(factor1) == type(str()):
-            X = cpts[factor1]
-        else:
-            X = factor1
+    # def factorMultiplication(self, factor1, factor2):
+    #     cpts = self.bn.get_all_cpts()
+    #     if type(factor1) == type(str()):
+    #         X = cpts[factor1]
+    #     else:
+    #         X = factor1
 
-        if type(factor2) == type(str()):
-            Z = cpts[factor2]
-        else: 
-            Z = factor2
-        union = list(set(X.columns).intersection(Z.columns))
-        union.remove('p')
-        cols = list(pd.concat([X, Z]).columns)
-        cols.remove('p')
-        res = pd.DataFrame(columns=cols + ['p'])
-        for x in range(len(X.iloc[:, 0])):
-            for z in range(len(Z.iloc[:, 0])):
-                if X.loc[x, union[0]] == Z.loc[z, union[0]]:
-                    mul = X.loc[x, 'p'] * Z.loc[z, 'p']
-                    df = pd.merge(X.loc[x:x, X.columns != 'p'], Z.loc[z:z, Z.columns != 'p'])
-                    df['p'] = mul
-                    res = pd.concat([res, df])
-        return res
+    #     if type(factor2) == type(str()):
+    #         Z = cpts[factor2]
+    #     else: 
+    #         Z = factor2
+    #     union = list(set(X.columns).intersection(Z.columns))
+    #     union.remove('p')
+    #     cols = list(pd.concat([X, Z]).columns)
+    #     cols.remove('p')
+    #     res = pd.DataFrame(columns=cols + ['p'])
+    #     for x in range(len(X.iloc[:, 0])):
+    #         for z in range(len(Z.iloc[:, 0])):
+    #             if X.loc[x, union[0]] == Z.loc[z, union[0]]:
+    #                 mul = X.loc[x, 'p'] * Z.loc[z, 'p']
+    #                 df = pd.merge(X.loc[x:x, X.columns != 'p'], Z.loc[z:z, Z.columns != 'p'])
+    #                 df['p'] = mul
+    #                 res = pd.concat([res, df])
+    #     return res
+
+    def factorMultiplication(self, f1, f2):
+        cpts = self.bn.get_all_cpts()
+        if type(f1) == type(str()):
+            f1 = cpts[f1]
+
+        if type(f2) == type(str()):
+            f2 = cpts[f2]
+
+        if sum([1 for x in f1.columns if x in list(f2.columns)]) > 1:
+            Tfunc = pd.merge(f1.drop(['p'],axis=1),f2.drop(['p'],axis=1), how="outer").dropna()
+        else:
+            Tfunc = pd.merge(f1.drop(['p'],axis=1),f2.drop(['p'],axis=1), how="cross").dropna()
+
+        probRows = list()
+        for index, row in Tfunc.iterrows():
+            values = row[f1.columns[:-1]]
+            prob1 = f1.loc[(f1[list(values.keys())] == values).all(axis=1)]['p']
+            values = row[f2.columns[:-1]]
+            prob2 = f2.loc[(f2[list(values.keys())] == values).all(axis=1)]['p']
+            probRows.append(prob1*prob2)
+        Tfunc['p'] = probRows
+        return Tfunc
 
     def Ordering(self, heuristic):
         if heuristic == 'min-degree':
