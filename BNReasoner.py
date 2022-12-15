@@ -78,58 +78,20 @@ class BNReasoner:
 
         return res
 
-    # def factorMultiplication(self, factor1, factor2):
-    #     cpts = self.bn.get_all_cpts()
-    #     if type(factor1) == type(str()):
-    #         X = cpts[factor1]
-    #     else:
-    #         X = factor1
+    def factorMultiplication(self, f1=pd.DataFrame(), f2=pd.DataFrame()):
+        equalColumns = [name for name in f1.columns if name in list(f2.columns) and name != "ins. of" and name != "p" ]
+        f1 = f1.sort_values(equalColumns)
+        f2 = f2.sort_values(equalColumns)
+        Tfunc = f1.merge(f2, on=equalColumns, how="outer")
+        Tfunc['p'] = Tfunc['p_x'] * Tfunc['p_y']
+        Tfunc = Tfunc.drop(["p_x","p_y"], axis=1)
 
-    #     if type(factor2) == type(str()):
-    #         Z = cpts[factor2]
-    #     else: 
-    #         Z = factor2
-    #     union = list(set(X.columns).intersection(Z.columns))
-    #     union.remove('p')
-    #     cols = list(pd.concat([X, Z]).columns)
-    #     cols.remove('p')
-    #     res = pd.DataFrame(columns=cols + ['p'])
-    #     for x in range(len(X.iloc[:, 0])):
-    #         for z in range(len(Z.iloc[:, 0])):
-    #             if X.loc[x, union[0]] == Z.loc[z, union[0]]:
-    #                 mul = X.loc[x, 'p'] * Z.loc[z, 'p']
-    #                 df = pd.merge(X.loc[x:x, X.columns != 'p'], Z.loc[z:z, Z.columns != 'p'])
-    #                 df['p'] = mul
-    #                 res = pd.concat([res, df])
-    #     return res
+        if "ins. of_x" in Tfunc.columns and "ins. of_y" in Tfunc.columns:
+            Tfunc["ins. of"] = [f"{x} {y}" for x, y in zip(Tfunc["ins. of_x"], Tfunc["ins. of_y"])]
+            Tfunc = Tfunc.drop(["ins. of_x", "ins. of_y"], axis=1)
 
-    def factorMultiplication(self, f1, f2):
-        cpts = self.bn.get_all_cpts()
-        if type(f1) == type(str()):
-            f1 = cpts[f1]
-
-        if type(f2) == type(str()):
-            f2 = cpts[f2]
-
-        if sum([1 for x in f1.columns if x in list(f2.columns)]) > 1:
-            Tfunc = pd.merge(f1.drop(['p'],axis=1),f2.drop(['p'],axis=1), how="outer").dropna()
-        else:
-            Tfunc = pd.merge(f1.drop(['p'],axis=1),f2.drop(['p'],axis=1), how="cross").dropna()
-
-        probRows = list()
-        for index, row in Tfunc.iterrows():
-            if 'ins. of' in list(f2.columns):
-                print(list(f2.columns))
-                ins2 = f2['ins. of']
-                f2 = f2.drop('ins. of', axis=1)
-                print(ins2)
-                exit()
-            values = row[f1.columns[:-1]]
-            prob1 = f1.loc[(f1[list(values.keys())] == values).all(axis=1)]['p']
-            values = row[f2.columns[:-1]]
-            prob2 = f2.loc[(f2[list(values.keys())] == values).all(axis=1)]['p']
-            probRows.append(list(prob1)[0]*list(prob2)[0])
-        Tfunc['p'] = probRows
+        if 'ins. of' in Tfunc.columns:
+            Tfunc = Tfunc[list(Tfunc.drop('ins. of', axis=1).columns) + ['ins. of']] #Change the order of the columns (with its values)
         return Tfunc
 
     def Ordering(self, heuristic):
@@ -230,16 +192,13 @@ class BNReasoner:
             while len(func) > 1:
                 f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
                 del func[1]
-                print(f1,f2)
                 func[0] = self.factorMultiplication(f1,f2)
             func = func[0]
-            print(func)
-            print("AAAAAAAAAAAAAAAAAAAA",var)
-            
             func = self.maxingOut(variable=var, cpt=func)
-            print(func)
             cpts[funcKeys[0]] = func
-        return cpts
+        cpt = [x for k,x in cpts.items()][0]
+        print(cpt['ins. of'])
+        return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -256,7 +215,7 @@ class BNReasoner:
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-print(reasoner.mpe(evidence={'family-out': True}))
+print(reasoner.mpe(evidence={'bowel-problem': True}))
 # print(reasoner.map(query=['dog-out', 'hear-bark'],evidence={'family-out': True}))
 # print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
