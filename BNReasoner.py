@@ -222,19 +222,10 @@ class BNReasoner:
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
             func = func[0]
-            print(func)
             func = self.maxingOut(variable=var, cpt=func)
-            print(func)
             cpts[funcKeys[0]] = func
-        cpt = [x for k,x in cpts.items()][0]
-        print(cpt)
-        try:
-            return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
-        except:
-            try:
-                return cpt['p'].to_list(), cpt["ins. of"].to_list()
-            except:
-                return cpt['p'].to_list(), evidence
+        cpt = [x for k,x in cpts.items() if not x.empty][0]
+        return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
 
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
