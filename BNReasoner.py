@@ -122,7 +122,7 @@ class BNReasoner:
             prob1 = f1.loc[(f1[list(values.keys())] == values).all(axis=1)]['p']
             values = row[f2.columns[:-1]]
             prob2 = f2.loc[(f2[list(values.keys())] == values).all(axis=1)]['p']
-            probRows.append(prob1*prob2)
+            probRows.append(list(prob1)[0]*list(prob2)[0])
         Tfunc['p'] = probRows
         return Tfunc
 
@@ -176,12 +176,17 @@ class BNReasoner:
         self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
         order = [var for var in self.Ordering('min-degree') if var not in query]
+        print(order)
         func = []
         for var in order:
-            func = func + [self.marginalization(cpt) for cpt in [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]] ##SUM-OUT over the values
+            func = func + [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
             while len(func) > 1:
-                func = [f1 if f2.shape[0] == 1 else f2 if f1.shape[0] == 1 else self.factorMultiplication(f1,f2) for f1, f2 in zip(func[::2],func[1::2])]
-        return func[0]
+                f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
+                del func[1]
+                func[0] = self.factorMultiplication(f1,f2)
+            func = [self.marginalization(cpt) for cpt in func]
+            func = [cpt.drop(cpt.columns[-2],axis=1) if cpt.columns[-2] not in query else cpt for cpt in func]
+        return func
 
     def marginalDistributions(self, query=list(), evidence=list()):
         self.pruneNetwork(Q=query, evidence=evidence)
@@ -189,27 +194,10 @@ class BNReasoner:
         factors['p'] = factors['p'] / factors['p'].sum()
         return factors
 
-    def mapping(self, query=dict(), evidence=dict()):
-        order = self.Ordering('min-degree')
-
-        order = [x for x in order if x not in query]
-        print(order)
-
-        for i in order:
-            result = self.marginalization(i, self.bn.get_all_cpts()[i]) #can't check, marginalization doet het nog niet goed
-            print('with marg:',result)
-            self.bn.update_cpt(i, result)
-
-        for q in query:
-            domax = self.maxingOut(q, self.bn.get_all_cpts()[q])
-            self.bn.update_cpt(q, domax)
-            print(self.bn.get_cpt(q))
-
-        print(domax.loc[:,'p'])
-        print(domax.loc[:,'ins. of'])
-
     def map(self, query=list(), evidence=dict()):
-        return self.marginalization(self.variableElimination(query=query,evidence=evidence))
+        print(self.variableElimination(query=query,evidence=evidence))
+        exit()
+        return self.maxingOut(cpt = self.variableElimination(query=query,evidence=evidence))
 
     def mpe(self, query=list(), evidence=dict()):
         self.pruneNetwork(Q=query, evidence=evidence)
@@ -228,16 +216,38 @@ class BNReasoner:
         return not self.dSeperation(X,Y,Z)
 
     def marginalization(self, cpt=pd.DataFrame()):
-        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
+        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)
 
-# reasoner = BNReasoner("./testing/dog_problem.BIFXML")
+reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 # print(reasoner.mpe(query=['dog-out'],evidence={'family-out': True}))
+print(reasoner.bn.get_all_cpts())
+print(reasoner.map(query=['dog-out'],evidence={'family-out': True}))
+# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
+# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
+
+# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+# print(reasoner.mpe(query=['traffic'],evidence={'sick': True}))
 # print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
 
-reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-print(reasoner.mpe(query=['traffic'],evidence={'sick': True}))
-# print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
-# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
-# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
+'''
+def mapping(self, query=dict(), evidence=dict()):
+        order = self.Ordering('min-degree')
+
+        order = [x for x in order if x not in query]
+        print(order)
+
+        for i in order:
+            result = self.marginalization(i, self.bn.get_all_cpts()[i]) #can't check, marginalization doet het nog niet goed
+            print('with marg:',result)
+            self.bn.update_cpt(i, result)
+
+        for q in query:
+            domax = self.maxingOut(q, self.bn.get_all_cpts()[q])
+            self.bn.update_cpt(q, domax)
+            print(self.bn.get_cpt(q))
+
+        print(domax.loc[:,'p'])
+        print(domax.loc[:,'ins. of'])
+'''
