@@ -208,14 +208,14 @@ class BNReasoner:
         cpts = self.bn.get_all_cpts()
         if pruning:
             self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence) 
-        self.bn.draw_structure()
+        # self.bn.draw_structure()
         self.reduceNet(evidence=evidence)
         cpts = self.bn.get_all_cpts()
-        order = self.Ordering('min-degree')
+        order = [x for x in self.Ordering('min-degree') if x not in list(evidence.keys())]
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
-            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
+            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] 
             while len(func) > 1:
                 f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
                 del func[1]
@@ -230,7 +230,7 @@ class BNReasoner:
             try:
                 return cpt['p'].to_list(), cpt["ins. of"].to_list()
             except:
-                return cpt['p'].to_list()
+                return cpt['p'].to_list(), evidence
 
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
