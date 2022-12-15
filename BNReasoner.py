@@ -197,7 +197,6 @@ class BNReasoner:
             func = self.maxingOut(variable=var, cpt=func)
             cpts[funcKeys[0]] = func
         cpt = [x for k,x in cpts.items()][0]
-        print(cpt['ins. of'])
         return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
