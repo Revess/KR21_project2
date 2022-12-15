@@ -118,6 +118,12 @@ class BNReasoner:
 
         probRows = list()
         for index, row in Tfunc.iterrows():
+            if 'ins. of' in list(f2.columns):
+                print(list(f2.columns))
+                ins2 = f2['ins. of']
+                f2 = f2.drop('ins. of', axis=1)
+                print(ins2)
+                exit()
             values = row[f1.columns[:-1]]
             prob1 = f1.loc[(f1[list(values.keys())] == values).all(axis=1)]['p']
             values = row[f2.columns[:-1]]
@@ -176,17 +182,20 @@ class BNReasoner:
         self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
         order = [var for var in self.Ordering('min-degree') if var not in query]
-        print(order)
         func = []
         for var in order:
-            func = func + [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
+            funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
+            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
             while len(func) > 1:
                 f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
-            func = [self.marginalization(cpt) for cpt in func]
-            func = [cpt.drop(cpt.columns[-2],axis=1) if cpt.columns[-2] not in query else cpt for cpt in func]
-        return func
+            func = [cpt[[name for name in cpt.columns if name != var and name != 'p']+ [var] + ['p']] for cpt in func]
+            func = [self.marginalization(cpt) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func ]
+            func = [cpt.drop(cpt.columns[-2],axis=1) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
+            for index, key in enumerate(funcKeys[:len(func)]):
+                cpts[key] = func[index]
+        return cpts
 
     def marginalDistributions(self, query=list(), evidence=list()):
         self.pruneNetwork(Q=query, evidence=evidence)
@@ -194,15 +203,43 @@ class BNReasoner:
         factors['p'] = factors['p'] / factors['p'].sum()
         return factors
 
-    def map(self, query=list(), evidence=dict()):
-        print(self.variableElimination(query=query,evidence=evidence))
-        exit()
-        return self.maxingOut(cpt = self.variableElimination(query=query,evidence=evidence))
+    def map(self, query=list(), evidence=dict(), pruning=False):
+        if pruning:
+            self.pruneNetwork(Q=query, evidence=evidence)
+        cpts = self.variableElimination(query=query,evidence=evidence)
+        func = [cpt for key, cpt in cpts.items() if sum([1 if x in query else 0 for x in cpt.columns ]) > 0]
+        while len(func) > 1:
+            f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
+            del func[1]
+            func[0] = self.factorMultiplication(f1,f2)
+        func = func[0]
+        for q in query:
+            func = self.maxingOut(variable=q, cpt=func)
+        return func
 
-    def mpe(self, query=list(), evidence=dict()):
-        self.pruneNetwork(Q=query, evidence=evidence)
-        factor = self.variableElimination(query=query,evidence=evidence)
-        return factor['p'].values[0], factor.drop('p', axis=1).to_dict('records')[0]
+    def mpe(self, evidence=dict(), pruning=True):
+        if pruning:
+            self.pruneNetwork(evidence=evidence) 
+        self.reduceNet(evidence=evidence)
+        cpts = self.bn.get_all_cpts()
+        order = self.Ordering('min-degree')
+        func = []
+        for var in order:
+            funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
+            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
+            while len(func) > 1:
+                f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
+                del func[1]
+                print(f1,f2)
+                func[0] = self.factorMultiplication(f1,f2)
+            func = func[0]
+            print(func)
+            print("AAAAAAAAAAAAAAAAAAAA",var)
+            
+            func = self.maxingOut(variable=var, cpt=func)
+            print(func)
+            cpts[funcKeys[0]] = func
+        return cpts
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -216,12 +253,11 @@ class BNReasoner:
         return not self.dSeperation(X,Y,Z)
 
     def marginalization(self, cpt=pd.DataFrame()):
-        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)
+        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
 reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-# print(reasoner.mpe(query=['dog-out'],evidence={'family-out': True}))
-print(reasoner.bn.get_all_cpts())
-print(reasoner.map(query=['dog-out'],evidence={'family-out': True}))
+print(reasoner.mpe(evidence={'family-out': True}))
+# print(reasoner.map(query=['dog-out', 'hear-bark'],evidence={'family-out': True}))
 # print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
 
