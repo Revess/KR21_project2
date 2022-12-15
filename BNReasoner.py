@@ -18,23 +18,48 @@ class BNReasoner:
         else:
             self.bn = net
 
-    def pruneNetwork(self, Q=list(), evidence=dict()): #leaf nodes die in Q voorkomen mogen toch ook niet gedelete worden? Moet hier geen rekening mee gehouden worden
-        # Q is list van values.
+    def pruneNetwork(self, Q=list(), evidence=dict()):
         cpts = self.bn.get_all_cpts()
-        # remove edges
-        for node in cpts.keys():
-            for ev in [ev for ev in evidence if ev in cpts[node].keys() and ev != list(cpts[node].keys())[-2]]: # Make sure the evidence is in the node and that the node is not the evidence itself
-                if node not in Q:
-                    new_cpt = cpts[node][cpts[node][ev] == evidence[ev]]
-                    new_cpt = new_cpt.drop(ev,axis=1)
-                    self.bn.update_cpt(node, new_cpt)
-                    # Delete the edge itself
-                    self.bn.del_edge((ev,list(cpts[node].keys())[-2]))
-                    # Now also remove the node
-                    if len(self.bn.get_children(node)) == 0 and len(new_cpt[node].keys()) == 2 and len(self.bn.get_parents(node)) == 0:
-                        self.bn.del_var(node)
-                    if len(self.bn.get_children(ev)) == 0 and len(self.bn.get_parents(ev)) == 0:
-                        self.bn.del_var(ev)
+        for e in evidence.keys():
+            del_ = []
+            for i in range(len(list(self.bn.structure.out_edges))):
+                if e == list(reasoner.bn.structure.out_edges)[i][0]:
+                    del_ += [list(reasoner.bn.structure.out_edges)[i][1]]
+            for d in del_:
+                self.bn.del_edge((e, d))
+                cpt = cpts[d]
+                if evidence[e]:
+                    new_cpt = cpt.drop(list(cpt[cpt[e] == False].index))
+                    new_cpt = new_cpt.drop(e, axis = 1).reset_index(drop = True)
+                    self.bn.update_cpt(d,new_cpt)
+                elif not evidence[e]:
+                    new_cpt = cpt.drop(list(cpt[cpt[e] == True].index))
+                    new_cpt = new_cpt.drop(e, axis=1).reset_index(drop = True)
+                    self.bn.update_cpt(d, new_cpt)
+                else:
+                    print('Weird evidence, is it False or True?')
+
+        nodes = copy.deepcopy(self.bn.structure.nodes)
+        leafs = []
+        for n in nodes:
+            leaf = True
+            for i in range(len(list(self.bn.structure.out_edges))):
+                if n == list(reasoner.bn.structure.out_edges)[i][0]:
+                    leaf = False
+            if leaf and n not in evidence and n not in Q:
+               leafs += [n]
+        while len(leafs) != 0:
+            for l in leafs:
+                self.bn.del_var(l)
+            leafs = []
+            nodes = copy.deepcopy(self.bn.structure.nodes)
+            for n in nodes:
+                leaf = True
+                for i in range(len(list(self.bn.structure.out_edges))):
+                    if n == list(reasoner.bn.structure.out_edges)[i][0]:
+                        leaf = False
+                if leaf and n not in evidence and n not in Q:
+                    leafs += [n]
 
     def reduceNet(self, evidence=dict()):
         cpts = self.bn.get_all_cpts()
@@ -180,8 +205,10 @@ class BNReasoner:
         return func
 
     def mpe(self, evidence=dict(), pruning=True):
+        cpts = self.bn.get_all_cpts()
         if pruning:
-            self.pruneNetwork(evidence=evidence) 
+            self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence) 
+        self.bn.draw_structure()
         self.reduceNet(evidence=evidence)
         cpts = self.bn.get_all_cpts()
         order = self.Ordering('min-degree')
@@ -197,7 +224,14 @@ class BNReasoner:
             func = self.maxingOut(variable=var, cpt=func)
             cpts[funcKeys[0]] = func
         cpt = [x for k,x in cpts.items()][0]
-        return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
+        try:
+            return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
+        except:
+            try:
+                return cpt['p'].to_list(), cpt["ins. of"].to_list()
+            except:
+                return cpt['p'].to_list()
+
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
