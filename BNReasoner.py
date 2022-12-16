@@ -184,11 +184,18 @@ class BNReasoner:
                 cpts[key] = func[index]
         return cpts
 
+    # def marginalDistributions(self, query=list(), evidence=list()):
+    #     self.pruneNetwork(Q=query, evidence=evidence)
+    #     self.reduceNet(evidence=evidence)
+    #     factors = self.variableElimination(query=query, evidence=evidence)[0]
+    #     factors['p'] = factors['p'] / factors['p'].sum()
+    #     return factors
+
     def marginalDistributions(self, query=list(), evidence=list()):
         self.pruneNetwork(Q=query, evidence=evidence)
-        self.reduceNet(evidence=evidence)
-        factors = self.variableElimination(query=query, evidence=evidence)[0]
-        factors['p'] = factors['p'] / factors['p'].sum()
+        factors = self.variableElimination(query=query, evidence=evidence)
+        for k in factors.keys():
+            factors[k]['p'] = factors[k]['p'] / factors[k]['p'].sum()
         return factors
 
     def map(self, query=list(), evidence=dict(), pruning=False):
@@ -225,7 +232,6 @@ class BNReasoner:
             cpts[funcKeys[0]] = func
         cpt = [x for k,x in cpts.items() if not x.empty][0]
         return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
-
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
