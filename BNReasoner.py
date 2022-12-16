@@ -136,8 +136,7 @@ class BNReasoner:
                 for ne in range(len(new_edges) - 1):
                     for ae in range(ne + 1, len(new_edges)):
                         if new_edges[ae] not in graph[new_edges[ne]]:
-                            print('adding', ne)
-                            degrees[ne] += 1
+                            degrees[new_edges[ne]] += 1
                 del degrees[e]
             return order
         elif heuristic == 'min-fill':
@@ -184,24 +183,17 @@ class BNReasoner:
                 cpts[key] = func[index]
         return cpts
 
-    # def marginalDistributions(self, query=list(), evidence=list()):
-    #     self.pruneNetwork(Q=query, evidence=evidence)
-    #     self.reduceNet(evidence=evidence)
-    #     factors = self.variableElimination(query=query, evidence=evidence)[0]
-    #     factors['p'] = factors['p'] / factors['p'].sum()
-    #     return factors
-
-    def marginalDistributions(self, query=list(), evidence=list()):
+    def marginalDistributions(self, query=list(), evidence=list(), ordering='min-degree'):
         self.pruneNetwork(Q=query, evidence=evidence)
-        factors = self.variableElimination(query=query, evidence=evidence)
+        factors = self.variableElimination(query=query, evidence=evidence, ordering=ordering)
         for k in factors.keys():
             factors[k]['p'] = factors[k]['p'] / factors[k]['p'].sum()
         return factors
 
-    def map(self, query=list(), evidence=dict(), pruning=False):
+    def map(self, query=list(), evidence=dict(), pruning=False, ordering='min-degree'):
         if pruning:
             self.pruneNetwork(Q=query, evidence=evidence)
-        cpts = self.variableElimination(query=query,evidence=evidence)
+        cpts = self.variableElimination(query=query,evidence=evidence, ordering=ordering)
         func = [cpt for key, cpt in cpts.items() if sum([1 if x in query else 0 for x in cpt.columns ]) > 0]
         while len(func) > 1:
             f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
@@ -215,7 +207,7 @@ class BNReasoner:
     def mpe(self, evidence=dict(), pruning=True, ordering='min-degree'):
         cpts = self.bn.get_all_cpts()
         if pruning:
-            self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence) 
+            self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence)
         self.reduceNet(evidence=evidence)
         cpts = self.bn.get_all_cpts()
         order = self.Ordering(ordering)
@@ -246,6 +238,10 @@ class BNReasoner:
 
     def marginalization(self, cpt=pd.DataFrame()):
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
+
+reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+print(reasoner.map(query=["partner-takes-car"],evidence={"bike":True}, pruning=False))
+
 
 # reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 # print(reasoner.mpe(evidence={'dog-out': True}))
