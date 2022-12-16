@@ -177,8 +177,11 @@ class BNReasoner:
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
             func = [cpt[[name for name in cpt.columns if name != var and name != 'p']+ [var] + ['p']] for cpt in func]
-            func = [self.marginalization(cpt) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func ]
+
+            func = [self.marginalization(cpt) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
+
             func = [cpt.drop(cpt.columns[-2],axis=1) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
+
             for index, key in enumerate(funcKeys[:len(func)]):
                 cpts[key] = func[index]
         return cpts
@@ -222,8 +225,11 @@ class BNReasoner:
             func = func[0]
             func = self.maxingOut(variable=var, cpt=func)
             cpts[funcKeys[0]] = func
-        cpt = [x for k,x in cpts.items() if not x.empty][0]
-        return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
+        try:
+            cpt = [x for k,x in cpts.items() if not x.empty][0]
+            return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
+        except:
+            return []
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -239,42 +245,44 @@ class BNReasoner:
     def marginalization(self, cpt=pd.DataFrame()):
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
-reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-print(reasoner.map(query=["partner-takes-car"],evidence={"bike":True}, pruning=False))
-
-
-# reasoner = BNReasoner("./testing/dog_problem.BIFXML")
-# print(reasoner.mpe(evidence={'dog-out': True}))
-# print(reasoner.mpe(evidence={'bowel-problem': True}))
-
-
-# print(reasoner.map(query=['dog-out', 'hear-bark'],evidence={'family-out': True}))
-# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
-# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
-
-# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-# print(reasoner.mpe(evidence={'sick': True}))
-# print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
-# print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
-# print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
-
-'''
-def mapping(self, query=dict(), evidence=dict()):
-        order = self.Ordering('min-degree')
-
-        order = [x for x in order if x not in query]
-        print(order)
-
-        for i in order:
-            result = self.marginalization(i, self.bn.get_all_cpts()[i]) #can't check, marginalization doet het nog niet goed
-            print('with marg:',result)
-            self.bn.update_cpt(i, result)
-
-        for q in query:
-            domax = self.maxingOut(q, self.bn.get_all_cpts()[q])
-            self.bn.update_cpt(q, domax)
-            print(self.bn.get_cpt(q))
-
-        print(domax.loc[:,'p'])
-        print(domax.loc[:,'ins. of'])
-'''
+def runAllQuestions():
+    questions = {
+        "Variable Elimination":[
+            {"Q":["car"], 
+            "e":{}}
+        ],
+        "MPE": [
+            {"Q":[], 
+            "e":{"rain":True, "sick":True, "partner-takes-car":False}}
+        ],
+        "MAP/Mar":
+        [
+        {"Q":["going-outside"], 
+        "e":{"traffic":True, "car":True, "rain":True, "overslept":False}},
+        {"Q":["stay-home"], 
+        "e":{"party-last-night":False, "overslept":True, "arrive-on-time":True}},
+        {"Q":["public-transport"], 
+        "e":{"rain":True, "traffic":False}}
+    ]}
+    for algoType in questions:
+        print(questions[algoType])
+        reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+        if "Variable" in algoType:
+            print(algoType)
+            for question in questions[algoType]:
+                print(reasoner.variableElimination(query=question["Q"]))
+        elif "MAP" in algoType:
+            for question in questions[algoType]:
+                for i in range(2):
+                    if not i:
+                        print("Marginal")
+                        print(reasoner.marginalDistributions(query=question["Q"],evidence=question["e"]))
+                    else:
+                        print("MAP")
+                        print(reasoner.map(query=question["Q"],evidence=question["e"]))
+        else:
+            for question in questions[algoType]:
+                print(reasoner.mpe(evidence=question["e"]))
+        print("\n\n")
+        
+runAllQuestions()
