@@ -1,0 +1,370 @@
+[{'Q': ['car'], 'e': {}}]
+Variable Elimination
+     rain  traffic  partner-takes-car  overslept    car         p
+0   False    False              False      False  False  0.079753
+1   False     True              False      False   True  0.002848
+2   False     True              False      False  False  0.006646
+3   False     True               True      False  False  0.085450
+4   False     True               True      False   True  0.000000
+5   False    False               True      False   True  0.000000
+6   False    False               True      False  False  0.022154
+7   False    False              False      False   True  0.119629
+8   False     True              False       True   True  0.000181
+9   False     True              False       True  False  0.017925
+10  False     True               True       True  False  0.162950
+11  False     True               True       True   True  0.000000
+12  False    False               True       True   True  0.000000
+13  False    False               True       True  False  0.042246
+14  False    False              False       True   True  0.376415
+15  False    False              False       True  False  0.003802
+16   True     True               True      False  False  0.000000
+17   True     True              False      False   True  0.000461
+18   True     True              False      False  False  0.000005
+19   True     True               True      False   True  0.004190
+20   True    False               True      False   True  0.000000
+21   True    False               True      False  False  0.002173
+22   True    False              False      False   True  0.008604
+23   True    False              False      False  False  0.000087
+24   True     True              False       True  False  0.000019
+25   True     True              False       True   True  0.001915
+26   True    False               True       True   True  0.000000
+27   True    False               True       True  False  0.009027
+28   True    False              False       True   True  0.035748
+29   True    False              False       True  False  0.000361
+30   True     True               True       True  False  0.017410
+31   True     True               True       True   True  0.000000}
+
+
+
+[{'Q': [], 'e': {'rain': True, 'sick': True, 'partner-takes-car': False}}]
+MPE
+(0.0029099347200000005, 'stay-home: True going-outside: False sick: True, party-last-night: True partner-takes-car: False rain: True, public-transport: True, bike: True, car: True, traffic: True')
+
+
+
+{'Q': ['going-outside'], 'e': {'traffic': True, 'car': True, 'rain': True, 'overslept': False}}
+Marginal
+    arrive-on-time   sick  going-outside  party-last-night overslept    public-transport   bike   car  traffic  partner-takes-car  rain         p  
+0            False  False          False             False     False    False             False  True     True              False  True  0.000016   
+1            False  False          False             False     False    False             False  True     True               True  True  0.000014
+2            False  False          False             False     False    False              True  True     True              False  True  0.000105
+3            False  False          False             False     False    False              True  True     True               True  True  0.000095 
+4            False  False          False             False     False   
+..             ...    ...            ...               ...       ...   
+91            True   True           True             False     False   
+92            True   True           True             False     False   
+93            True   True           True             False     False   
+94            True   True           True             False     False   
+95            True   True           True             False     False   
+
+
+0  
+1                
+2                
+3               
+4               True  False  True     True              False  True  0.001412  
+..               ...    ...   ...      ...                ...   ...       ...  
+91             False   True  True     True               True  True  0.000201  
+92              True  False  True     True              False  True  0.002979  
+93              True  False  True     True               True  True  0.029791  
+94              True   True  True     True              False  True  0.002185  
+95              True   True  True     True               True  True  0.021847  
+
+[96 rows x 12 columns]}
+MAP
+   arrive-on-time   sick party-last-night overslept public-transport   bike  \
+0           False  False            False     False            False  False   
+1           False  False            False     False            False  False   
+2           False  False            False     False            False   True   
+3           False  False            False     False            False   True   
+4           False  False            False     False             True  False   
+5           False  False            False     False             True  False   
+6           False  False            False     False             True   True   
+7           False  False            False     False             True   True   
+8           False  False             True     False            False  False   
+9           False  False             True     False            False  False   
+10          False  False             True     False            False   True   
+11          False  False             True     False            False   True   
+12          False  False             True     False             True  False   
+13          False  False             True     False             True  False   
+14          False  False             True     False             True   True   
+15          False  False             True     False             True   True   
+16          False   True            False     False            False  False   
+17          False   True            False     False            False  False   
+18          False   True            False     False            False   True   
+19          False   True            False     False            False   True   
+20          False   True            False     False             True  False   
+21          False   True            False     False             True  False   
+22          False   True            False     False             True   True   
+23          False   True            False     False             True   True   
+24           True  False            False     False            False  False   
+25           True  False            False     False            False  False   
+26           True  False            False     False            False   True   
+27           True  False            False     False            False   True   
+28           True  False            False     False             True  False   
+29           True  False            False     False             True  False   
+30           True  False            False     False             True   True   
+31           True  False            False     False             True   True   
+32           True  False             True     False            False  False   
+33           True  False             True     False            False  False   
+34           True  False             True     False            False   True   
+35           True  False             True     False            False   True   
+36           True  False             True     False             True  False   
+37           True  False             True     False             True  False   
+38           True  False             True     False             True   True   
+39           True  False             True     False             True   True   
+40           True   True            False     False            False  False   
+41           True   True            False     False            False  False   
+42           True   True            False     False            False   True   
+43           True   True            False     False            False   True   
+44           True   True            False     False             True  False   
+45           True   True            False     False             True  False   
+46           True   True            False     False             True   True   
+47           True   True            False     False             True   True   
+
+     car traffic partner-takes-car  rain             p               ins. of  
+0   True    True             False  True  1.094861e-07   going-outside: True  
+1   True    True              True  True  9.953280e-08   going-outside: True  
+2   True    True             False  True  7.299072e-07   going-outside: True  
+3   True    True              True  True  6.635520e-07   going-outside: True  
+4   True    True             False  True  9.853747e-06   going-outside: True  
+5   True    True              True  True  9.853747e-05   going-outside: True  
+6   True    True             False  True  6.569165e-07   going-outside: True  
+7   True    True              True  True  6.569165e-06   going-outside: True  
+8   True    True             False  True  1.539648e-08   going-outside: True  
+9   True    True              True  True  1.399680e-08   going-outside: True  
+10  True    True             False  True  1.026432e-07   going-outside: True  
+11  True    True              True  True  9.331200e-08   going-outside: True  
+12  True    True             False  True  1.385683e-06   going-outside: True  
+13  True    True              True  True  1.385683e-05   going-outside: True  
+14  True    True             False  True  9.237888e-08   going-outside: True  
+15  True    True              True  True  9.237888e-07   going-outside: True  
+16  True    True             False  True  5.474304e-08   going-outside: True  
+17  True    True              True  True  4.976640e-08   going-outside: True  
+18  True    True             False  True  3.649536e-07   going-outside: True  
+19  True    True              True  True  3.317760e-07   going-outside: True  
+20  True    True             False  True  4.926874e-06   going-outside: True  
+21  True    True              True  True  4.926874e-05   going-outside: True  
+22  True    True             False  True  3.284582e-07   going-outside: True  
+23  True    True              True  True  3.284582e-06   going-outside: True  
+24  True    True             False  True  1.625868e-05  going-outside: False  
+25  True    True              True  True  1.478062e-05  going-outside: False  
+26  True    True             False  True  9.853747e-06  going-outside: False  
+27  True    True              True  True  8.957952e-06  going-outside: False  
+28  True    True             False  True  1.330256e-04  going-outside: False  
+29  True    True              True  True  1.330256e-03  going-outside: False  
+30  True    True             False  True  9.755210e-05  going-outside: False  
+31  True    True              True  True  9.755210e-04  going-outside: False  
+32  True    True             False  True  2.286377e-06  going-outside: False  
+33  True    True              True  True  2.078525e-06  going-outside: False  
+34  True    True             False  True  1.385683e-06  going-outside: False  
+35  True    True              True  True  1.259712e-06  going-outside: False  
+36  True    True             False  True  1.870672e-05  going-outside: False  
+37  True    True              True  True  1.870672e-04  going-outside: False  
+38  True    True             False  True  1.371826e-05  going-outside: False  
+39  True    True              True  True  1.371826e-04  going-outside: False  
+40  True    True             False  True  5.080838e-06  going-outside: False  
+41  True    True              True  True  4.618944e-06  going-outside: False  
+42  True    True             False  True  3.079296e-06  going-outside: False  
+43  True    True              True  True  2.799360e-06  going-outside: False  
+44  True    True             False  True  4.157050e-05  going-outside: False  
+45  True    True              True  True  4.157050e-04  going-outside: False  
+46  True    True             False  True  3.048503e-05  going-outside: False  
+47  True    True              True  True  3.048503e-04  going-outside: False  
+{'Q': ['stay-home'], 'e': {'party-last-night': False, 'overslept': True, 'arrive-on-time': True}}
+Marginal
+{'party-last-night':    party-last-night    p
+0             False  1.0, 'rain':      rain   sick  stay-home  overslept  public-transport   bike    car  \
+0   False  False      False       True             False  False   True   
+1   False  False      False       True             False   True  False   
+2   False  False      False       True             False   True   True   
+3   False  False      False       True              True  False  False   
+4   False  False      False       True              True  False   True   
+5   False  False      False       True              True   True  False   
+6   False  False      False       True              True   True   True   
+7   False  False       True       True             False  False   True   
+8   False  False       True       True             False   True  False   
+9   False  False       True       True             False   True   True   
+10  False  False       True       True              True  False  False   
+11  False  False       True       True              True  False   True   
+12  False  False       True       True              True   True  False   
+13  False  False       True       True              True   True   True   
+14  False   True      False       True             False  False   True   
+15  False   True      False       True             False   True  False   
+16  False   True      False       True             False   True   True   
+17  False   True      False       True              True  False  False   
+18  False   True      False       True              True  False   True   
+19  False   True      False       True              True   True  False   
+20  False   True      False       True              True   True   True   
+21  False   True       True       True             False  False   True   
+22  False   True       True       True             False   True  False   
+23  False   True       True       True             False   True   True   
+24  False   True       True       True              True  False  False   
+25  False   True       True       True              True  False   True   
+26  False   True       True       True              True   True  False   
+27  False   True       True       True              True   True   True   
+28   True  False      False       True             False  False   True   
+29   True  False      False       True             False   True  False   
+30   True  False      False       True             False   True   True   
+31   True  False      False       True              True  False  False   
+32   True  False      False       True              True  False   True   
+33   True  False      False       True              True   True  False   
+34   True  False      False       True              True   True   True   
+35   True  False       True       True             False  False   True   
+36   True  False       True       True             False   True  False   
+37   True  False       True       True             False   True   True   
+38   True  False       True       True              True  False  False   
+39   True  False       True       True              True  False   True   
+40   True  False       True       True              True   True  False   
+41   True  False       True       True              True   True   True   
+42   True   True      False       True             False  False   True   
+43   True   True      False       True             False   True  False   
+44   True   True      False       True             False   True   True   
+45   True   True      False       True              True  False  False   
+46   True   True      False       True              True  False   True   
+47   True   True      False       True              True   True  False   
+48   True   True      False       True              True   True   True   
+49   True   True       True       True             False  False   True   
+50   True   True       True       True             False   True  False   
+51   True   True       True       True             False   True   True   
+52   True   True       True       True              True  False  False   
+53   True   True       True       True              True  False   True   
+54   True   True       True       True              True   True  False   
+55   True   True       True       True              True   True   True   
+
+   arrive-on-time         p  
+0            True  0.203859  
+1            True  0.058846  
+2            True  0.022699  
+3            True  0.001191  
+4            True  0.016180  
+5            True  0.046874  
+6            True  0.002219  
+7            True  0.050965  
+8            True  0.014711  
+9            True  0.005675  
+10           True  0.000298  
+11           True  0.004045  
+12           True  0.011719  
+13           True  0.000555  
+14           True  0.063706  
+15           True  0.018389  
+16           True  0.007093  
+17           True  0.000372  
+18           True  0.005056  
+19           True  0.014648  
+20           True  0.000693  
+21           True  0.191117  
+22           True  0.055168  
+23           True  0.021280  
+24           True  0.001117  
+25           True  0.015169  
+26           True  0.043945  
+27           True  0.002080  
+28           True  0.007024  
+29           True  0.000043  
+30           True  0.000809  
+31           True  0.001917  
+32           True  0.001385  
+33           True  0.002166  
+34           True  0.000408  
+35           True  0.001756  
+36           True  0.000011  
+37           True  0.000202  
+38           True  0.000479  
+39           True  0.000346  
+40           True  0.000542  
+41           True  0.000102  
+42           True  0.013170  
+43           True  0.000081  
+44           True  0.001518  
+45           True  0.003594  
+46           True  0.002596  
+47           True  0.004062  
+48           True  0.000765  
+49           True  0.039510  
+50           True  0.000242  
+51           True  0.004553  
+52           True  0.010782  
+53           True  0.007788  
+54           True  0.012186  
+55           True  0.002295  }
+MAP
+     rain   sick overslept public-transport   bike    car arrive-on-time  \
+0   False  False      True            False  False   True           True   
+1   False  False      True            False   True  False           True   
+2   False  False      True            False   True   True           True   
+3   False  False      True             True  False  False           True   
+4   False  False      True             True  False   True           True   
+5   False  False      True             True   True  False           True   
+6   False  False      True             True   True   True           True   
+7   False   True      True            False  False   True           True   
+8   False   True      True            False   True  False           True   
+9   False   True      True            False   True   True           True   
+10  False   True      True             True  False  False           True   
+11  False   True      True             True  False   True           True   
+12  False   True      True             True   True  False           True   
+13  False   True      True             True   True   True           True   
+14   True  False      True            False  False   True           True   
+15   True  False      True            False   True  False           True   
+16   True  False      True            False   True   True           True   
+17   True  False      True             True  False  False           True   
+18   True  False      True             True  False   True           True   
+19   True  False      True             True   True  False           True   
+20   True  False      True             True   True   True           True   
+21   True   True      True            False  False   True           True   
+22   True   True      True            False   True  False           True   
+23   True   True      True            False   True   True           True   
+24   True   True      True             True  False  False           True   
+25   True   True      True             True  False   True           True   
+26   True   True      True             True   True  False           True   
+27   True   True      True             True   True   True           True   
+
+           p           ins. of  
+0   0.041644  stay-home: False  
+1   0.012021  stay-home: False  
+2   0.004637  stay-home: False  
+3   0.000243  stay-home: False  
+4   0.003305  stay-home: False  
+5   0.009576  stay-home: False  
+6   0.000453  stay-home: False  
+7   0.039042   stay-home: True  
+8   0.011270   stay-home: True  
+9   0.004347   stay-home: True  
+10  0.000228   stay-home: True  
+11  0.003099   stay-home: True  
+12  0.008977   stay-home: True  
+13  0.000425   stay-home: True  
+14  0.001435  stay-home: False  
+15  0.000009  stay-home: False  
+16  0.000165  stay-home: False  
+17  0.000392  stay-home: False  
+18  0.000283  stay-home: False  
+19  0.000443  stay-home: False  
+20  0.000083  stay-home: False  
+21  0.008071   stay-home: True  
+22  0.000050   stay-home: True  
+23  0.000930   stay-home: True  
+24  0.002203   stay-home: True  
+25  0.001591   stay-home: True  
+26  0.002489   stay-home: True  
+27  0.000469   stay-home: True  
+
+{'Q': ['public-transport'], 'e': {'rain': True, 'traffic': False}}
+Marginal
+
+traffic     p
+0           False  1.0,
+   rain  partner-takes-car  public-transport  p
+0  True              False             False  0.640
+1  True              False              True  0.160
+2  True               True             False  0.002
+3  True               True              True  0.198
+
+MAP
+   rain partner-takes-car        p                  ins. of
+0  True             False  0.05120  public-transport: False
+1  True              True  0.01584   public-transport: True
+
+
+

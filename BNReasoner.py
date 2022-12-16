@@ -175,12 +175,13 @@ class BNReasoner:
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
+            oFunk = copy.deepcopy(cpts)
             func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] 
             while len(func) > 1:
                 f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
-            func = [self.marginalization(cpt, var) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
+            func = [self.marginalization(cpt, var) if var not in query + list(evidence.keys()) else cpt for cpt in func]
             for index, key in enumerate(funcKeys[:len(func)]):
                 cpts[key] = func[index]
         return cpts
@@ -242,7 +243,7 @@ class BNReasoner:
         return not self.dSeperation(X,Y,Z)
 
     def marginalization(self, cpt=pd.DataFrame(), sumFor=str()):
-        if False in cpt[sumFor].unique() and True not in cpt[sumFor].unique():
+        if (False in cpt[sumFor].unique() and True not in cpt[sumFor].unique()) or (True in cpt[sumFor].unique() and False not in cpt[sumFor].unique()):
             return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index()
         else:
             return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index().drop(sumFor, axis=1)
@@ -295,5 +296,24 @@ class BNReasoner:
 
 
 
-# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-# print(reasoner.mpe(evidence={"overslept":True}))
+reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+# {'Q': ['arrive-on-time', 'public-transport', 'rain'], 'e': {'arrive-on-time': True, 'car': True, 'public-transport': True, 'rain': False, 'overslept': True, 'bike': True}}
+# {'Q': ['bike'], 'e': {'partner-takes-car': True, 'car': True, 'arrive-on-time': True, 'bike': False, 'stay-home': True, 'traffic': False}}, pr=True or='min-degree'
+# {'Q': ['arrive-on-time', 'going-outside'], 'e': {'bike': False, 'going-outside': False, 'traffic': True, 'overslept': False, 'partner-takes-car': True, 'party-last-night': True}} pr=False or='min-degree'
+# {'Q': ['arrive-on-time'], 'e': {'partner-takes-car': True}} pr=False or='min-fill'
+Q = ['arrive-on-time']
+e = {'partner-takes-car': True}
+ordering = 'min-fill'
+pruning = True
+print(reasoner.map(
+    query=Q, 
+    evidence=e,
+    pruning=pruning,
+    ordering=ordering)
+)
+print(reasoner.marginalDistributions(
+    query=Q, 
+    evidence=e,
+    pruning=pruning,
+    ordering=ordering)
+)
