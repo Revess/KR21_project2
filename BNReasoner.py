@@ -107,7 +107,11 @@ class BNReasoner:
         equalColumns = [name for name in f1.columns if name in list(f2.columns) and name != "ins. of" and name != "p" ]
         f1 = f1.sort_values(equalColumns)
         f2 = f2.sort_values(equalColumns)
-        Tfunc = f1.merge(f2, on=equalColumns, how="outer")
+        if len(equalColumns) > 0:
+            Tfunc = f1.merge(f2, on=equalColumns, how="outer")
+        else:
+            Tfunc = f1.merge(f2, how="cross")
+        Tfunc = Tfunc.dropna()
         Tfunc['p'] = Tfunc['p_x'] * Tfunc['p_y']
         Tfunc = Tfunc.drop(["p_x","p_y"], axis=1)
 
@@ -171,22 +175,19 @@ class BNReasoner:
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
-            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] ##SUM-OUT over the values
+            func = [cpts.pop(key) for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns] 
             while len(func) > 1:
                 f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
-            func = [cpt[[name for name in cpt.columns if name != var and name != 'p']+ [var] + ['p']] for cpt in func]
-
-            func = [self.marginalization(cpt) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
-
-            func = [cpt.drop(cpt.columns[-2],axis=1) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
-
+            func = [self.marginalization(cpt, var) if cpt.columns[-2] not in query + list(evidence.keys()) else cpt for cpt in func]
             for index, key in enumerate(funcKeys[:len(func)]):
                 cpts[key] = func[index]
         return cpts
 
-    def marginalDistributions(self, query=list(), evidence=list(), ordering='min-degree'):
+    def marginalDistributions(self, query=list(), evidence=list(), pruning=False, ordering='min-degree'):
+        if pruning:
+            self.pruneNetwork(Q=query, evidence=evidence)
         self.pruneNetwork(Q=query, evidence=evidence)
         factors = self.variableElimination(query=query, evidence=evidence, ordering=ordering)
         for k in factors.keys():
@@ -196,7 +197,7 @@ class BNReasoner:
     def map(self, query=list(), evidence=dict(), pruning=False, ordering='min-degree'):
         if pruning:
             self.pruneNetwork(Q=query, evidence=evidence)
-        cpts = self.variableElimination(query=query,evidence=evidence, ordering=ordering)
+        cpts = self.variableElimination(query=query, evidence=evidence, ordering=ordering)
         func = [cpt for key, cpt in cpts.items() if sum([1 if x in query else 0 for x in cpt.columns ]) > 0]
         while len(func) > 1:
             f1,f2 = copy.deepcopy(func[0]), copy.deepcopy(func[1])
@@ -223,13 +224,11 @@ class BNReasoner:
                 del func[1]
                 func[0] = self.factorMultiplication(f1,f2)
             func = func[0]
-            func = self.maxingOut(variable=var, cpt=func)
+            if len(list(func.iterrows())) > 1:
+                func = self.maxingOut(variable=var, cpt=func)
             cpts[funcKeys[0]] = func
-        try:
-            cpt = [x for k,x in cpts.items() if not x.empty][0]
-            return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
-        except:
-            return []
+        cpt = [x for k,x in cpts.items() if not x.empty][0]
+        return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
         graph = self.bn.get_interaction_graph()
@@ -242,47 +241,59 @@ class BNReasoner:
     def independence(self, X=list(), Y=list(), Z=list()):
         return not self.dSeperation(X,Y,Z)
 
-    def marginalization(self, cpt=pd.DataFrame()):
-        return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
-
-def runAllQuestions():
-    questions = {
-        "Variable Elimination":[
-            {"Q":["car"], 
-            "e":{}}
-        ],
-        "MPE": [
-            {"Q":[], 
-            "e":{"rain":True, "sick":True, "partner-takes-car":False}}
-        ],
-        "MAP/Mar":
-        [
-        {"Q":["going-outside"], 
-        "e":{"traffic":True, "car":True, "rain":True, "overslept":False}},
-        {"Q":["stay-home"], 
-        "e":{"party-last-night":False, "overslept":True, "arrive-on-time":True}},
-        {"Q":["public-transport"], 
-        "e":{"rain":True, "traffic":False}}
-    ]}
-    for algoType in questions:
-        print(questions[algoType])
-        reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-        if "Variable" in algoType:
-            print(algoType)
-            for question in questions[algoType]:
-                print(reasoner.variableElimination(query=question["Q"]))
-        elif "MAP" in algoType:
-            for question in questions[algoType]:
-                for i in range(2):
-                    if not i:
-                        print("Marginal")
-                        print(reasoner.marginalDistributions(query=question["Q"],evidence=question["e"]))
-                    else:
-                        print("MAP")
-                        print(reasoner.map(query=question["Q"],evidence=question["e"]))
+    def marginalization(self, cpt=pd.DataFrame(), sumFor=str()):
+        if False in cpt[sumFor].unique() and True not in cpt[sumFor].unique():
+            return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index()
         else:
-            for question in questions[algoType]:
-                print(reasoner.mpe(evidence=question["e"]))
-        print("\n\n")
-        
-runAllQuestions()
+            return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index().drop(sumFor, axis=1)
+
+# def runAllQuestions():
+#     questions = {
+#         "Variable Elimination":[
+#             {"Q":["car"], 
+#             "e":{}}
+#         ],
+#         "MPE": [
+#             {"Q":[], 
+#             "e":{"rain":True, "sick":True, "partner-takes-car":False}}
+#         ],
+#         "MAP/Mar":
+#         [
+#         {"Q":["going-outside"], 
+#         "e":{"traffic":True, "car":True, "rain":True, "overslept":False}},
+#         {"Q":["stay-home"], 
+#         "e":{"party-last-night":False, "overslept":True, "arrive-on-time":True}},
+#         {"Q":["public-transport"], 
+#         "e":{"rain":True, "traffic":False}}
+#     ]}
+#     for algoType in questions:
+#         print(questions[algoType])
+#         if "Variable" in algoType:
+#             print(algoType)
+#             for question in questions[algoType]:
+#                 reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+#                 print(reasoner.variableElimination(query=question["Q"]))
+#         elif "MAP" in algoType:
+#             for question in questions[algoType]:
+#                 print(question)
+#                 for i in range(2):
+#                     if not i:
+#                         print("Marginal")
+#                         reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+#                         print(reasoner.marginalDistributions(query=question["Q"],evidence=question["e"]))
+#                     else:
+#                         print("MAP")
+#                         reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+#                         print(reasoner.map(query=question["Q"],evidence=question["e"]))
+#         else:
+#             print("MPE")
+#             for question in questions[algoType]:
+#                 reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+#                 print(reasoner.mpe(evidence=question["e"]))
+#         print("\n\n")
+# runAllQuestions()
+
+
+
+# reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
+# print(reasoner.mpe(evidence={"overslept":True}))
