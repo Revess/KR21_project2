@@ -23,8 +23,8 @@ class BNReasoner:
         for e in evidence.keys():
             del_ = []
             for i in range(len(list(self.bn.structure.out_edges))):
-                if e == list(reasoner.bn.structure.out_edges)[i][0]:
-                    del_ += [list(reasoner.bn.structure.out_edges)[i][1]]
+                if e == list(self.bn.structure.out_edges)[i][0]:
+                    del_ += [list(self.bn.structure.out_edges)[i][1]]
             for d in del_:
                 self.bn.del_edge((e, d))
                 cpt = cpts[d]
@@ -44,7 +44,7 @@ class BNReasoner:
         for n in nodes:
             leaf = True
             for i in range(len(list(self.bn.structure.out_edges))):
-                if n == list(reasoner.bn.structure.out_edges)[i][0]:
+                if n == list(self.bn.structure.out_edges)[i][0]:
                     leaf = False
             if leaf and n not in evidence and n not in Q:
                leafs += [n]
@@ -56,7 +56,7 @@ class BNReasoner:
             for n in nodes:
                 leaf = True
                 for i in range(len(list(self.bn.structure.out_edges))):
-                    if n == list(reasoner.bn.structure.out_edges)[i][0]:
+                    if n == list(self.bn.structure.out_edges)[i][0]:
                         leaf = False
                 if leaf and n not in evidence and n not in Q:
                     leafs += [n]
@@ -165,10 +165,10 @@ class BNReasoner:
         else:
             print('wrong heuristic chosen, pick either min-degree or min-fill')
 
-    def variableElimination(self, query=list(), evidence=dict()):
+    def variableElimination(self, query=list(), evidence=dict(), ordering='min-degree'):
         self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
-        order = [var for var in self.Ordering('min-degree') if var not in query]
+        order = [var for var in self.Ordering(ordering) if var not in query]
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
@@ -186,7 +186,8 @@ class BNReasoner:
 
     def marginalDistributions(self, query=list(), evidence=list()):
         self.pruneNetwork(Q=query, evidence=evidence)
-        factors = self.variableElimination(query=query, evidence=evidence)
+        self.reduceNet(evidence=evidence)
+        factors = self.variableElimination(query=query, evidence=evidence)[0]
         factors['p'] = factors['p'] / factors['p'].sum()
         return factors
 
@@ -204,15 +205,13 @@ class BNReasoner:
             func = self.maxingOut(variable=q, cpt=func)
         return func
 
-    def mpe(self, evidence=dict(), pruning=True):
+    def mpe(self, evidence=dict(), pruning=True, ordering='min-degree'):
         cpts = self.bn.get_all_cpts()
         if pruning:
             self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence) 
-        # self.bn.draw_structure()
         self.reduceNet(evidence=evidence)
         cpts = self.bn.get_all_cpts()
-        # order = [x for x in self.Ordering('min-degree') if x not in list(evidence.keys())]
-        order = self.Ordering('min-degree')
+        order = self.Ordering(ordering)
         func = []
         for var in order:
             funcKeys = [key for key, cpt in copy.deepcopy(cpts).items() if var in cpt.columns]
@@ -242,9 +241,9 @@ class BNReasoner:
     def marginalization(self, cpt=pd.DataFrame()):
         return cpt.sort_values(list(cpt.columns[:-1])).groupby(cpt.index // 2).sum().replace(dict(zip(cpt.columns[:-1], [0]*len(cpt.columns[:-1]))),False).replace(dict(zip(cpt.columns[:-1], [2]*len(cpt.columns[:-1]))),True).replace(dict(zip(cpt.columns[:-1], [1]*len(cpt.columns[:-1]))),True)#.drop(cpt.columns[-2],axis=1)
 
-reasoner = BNReasoner("./testing/dog_problem.BIFXML")
+# reasoner = BNReasoner("./testing/dog_problem.BIFXML")
 # print(reasoner.mpe(evidence={'dog-out': True}))
-print(reasoner.mpe(evidence={'bowel-problem': True}))
+# print(reasoner.mpe(evidence={'bowel-problem': True}))
 
 
 # print(reasoner.map(query=['dog-out', 'hear-bark'],evidence={'family-out': True}))
@@ -252,7 +251,7 @@ print(reasoner.mpe(evidence={'bowel-problem': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
 
 # reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-# print(reasoner.mpe(query=['traffic'],evidence={'sick': True}))
+# print(reasoner.mpe(evidence={'sick': True}))
 # print(reasoner.map(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.marginalDistributions(query=['dog-out'],evidence={'dog-out': True}))
 # print(reasoner.variableElimination(query=['dog-out'], evidence={'family-out': True}))
