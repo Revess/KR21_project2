@@ -1,0 +1,2 @@
+0.0029099347200000005
+stay-home: True going-outside: False sick: True, party-last-night: True partner-takes-car: False rain: True, public-transport: True, bike: True, car: True, traffic: True
