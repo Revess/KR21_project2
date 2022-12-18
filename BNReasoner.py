@@ -19,6 +19,12 @@ class BNReasoner:
             self.bn = net
 
     def pruneNetwork(self, Q=list(), evidence=dict()):
+        """
+        An inplace function to prune the network
+
+        :param Q: a list of questions to prune for
+        :param evidence: a dict of true and false assignments for certain nodes
+        """
         cpts = self.bn.get_all_cpts()
         for e in evidence.keys():
             del_ = []
@@ -62,6 +68,11 @@ class BNReasoner:
                     leafs += [n]
 
     def reduceNet(self, evidence=dict()):
+        """
+        An inplace function to reduce the network
+
+        :param evidence: a dict of true and false assignments for certain nodes
+        """
         cpts = self.bn.get_all_cpts()
         for node in cpts.keys():
             if sum([1 if ev in cpts[node].keys() else 0 for ev in evidence]) >= 1:
@@ -69,7 +80,14 @@ class BNReasoner:
                 newCPT = newCPT[newCPT.p != 0]
                 self.bn.update_cpt(node, newCPT)          
 
-    def maxingOut(self, variable, cpt):
+    def maxingOut(self, variable=str(), cpt=pd.DataFrame()):
+        """
+        max-out a cpt based on a variable
+
+        :param variable: a str containing which variable to max-out for
+        :param cpt: a dataframe as a cpt
+        :return: a maxed-out cpt
+        """
         if len([col for col in cpt.columns if 'ins. of' in col]) > 1:
             print('Weird amount of instances columns, please check')
             return
@@ -104,6 +122,13 @@ class BNReasoner:
         return res
 
     def factorMultiplication(self, f1=pd.DataFrame(), f2=pd.DataFrame()):
+        """
+        multiply two cpts
+
+        :param f1: a dataframe as a cpt
+        :param f2: a dataframe as a cpt
+        :return: the factored cpts as one cpt (dataframe)
+        """
         equalColumns = [name for name in f1.columns if name in list(f2.columns) and name != "ins. of" and name != "p" ]
         f1 = f1.sort_values(equalColumns)
         f2 = f2.sort_values(equalColumns)
@@ -124,6 +149,12 @@ class BNReasoner:
         return Tfunc
 
     def Ordering(self, heuristic):
+        """
+        ordering
+
+        :param heuristic: min-fill or min-degree
+        :return: a list of nodes that are ordered
+        """
         if heuristic == 'min-degree':
             degrees = dict(self.bn.get_interaction_graph().degree)
             graph = copy.deepcopy(self.bn.get_interaction_graph().adj)
@@ -169,6 +200,14 @@ class BNReasoner:
             print('wrong heuristic chosen, pick either min-degree or min-fill')
 
     def variableElimination(self, query=list(), evidence=dict(), ordering='min-degree'):
+        """
+        variable elimination
+
+        :param query: a list with the question nodes to answer for
+        :param evidence: a dictionary that contains the nodes that have bool assignments
+        :param ordering: str, min-degree or min-fill
+        :return: a cpt containing the outcome of the variable eliminations calculations
+        """
         self.reduceNet(evidence=evidence) # First we set our evidence to True
         cpts = self.bn.get_all_cpts()
         order = [var for var in self.Ordering(ordering) if var not in query]
@@ -187,6 +226,15 @@ class BNReasoner:
         return cpts
 
     def marginalDistributions(self, query=list(), evidence=list(), pruning=False, ordering='min-degree'):
+        """
+        marginal distributions testing
+
+        :param query: a list with the question nodes to answer for
+        :param evidence: a dictionary that contains the nodes that have bool assignments
+        :param pruning: bool, to prune the network or not
+        :param ordering: str, min-degree or min-fill
+        :return: a cpt containing the outcome of the marginal distributions
+        """
         if pruning:
             self.pruneNetwork(Q=query, evidence=evidence)
         self.pruneNetwork(Q=query, evidence=evidence)
@@ -196,6 +244,15 @@ class BNReasoner:
         return factors
 
     def map(self, query=list(), evidence=dict(), pruning=False, ordering='min-degree'):
+        """
+        MAP testing
+
+        :param query: a list with the question nodes to answer for
+        :param evidence: a dictionary that contains the nodes that have bool assignments
+        :param pruning: bool, to prune the network or not
+        :param ordering: str, min-degree or min-fill
+        :return: a cpt containing the outcome of the MAP calculations
+        """
         if pruning:
             self.pruneNetwork(Q=query, evidence=evidence)
         cpts = self.variableElimination(query=query, evidence=evidence, ordering=ordering)
@@ -210,6 +267,14 @@ class BNReasoner:
         return func
 
     def mpe(self, evidence=dict(), pruning=True, ordering='min-degree'):
+        """
+        MPE testing
+
+        :param evidence: a dictionary that contains the nodes that have bool assignments
+        :param pruning: a bool, wheather the network should be pruned
+        :param ordering: a string, can either be min-degree or min-fill
+        :return: a p value and the assigned node values as a dict
+        """
         cpts = self.bn.get_all_cpts()
         if pruning:
             self.pruneNetwork(Q=list(cpts.keys()),evidence=evidence)
@@ -232,6 +297,14 @@ class BNReasoner:
         return cpt['p'].to_list()[0], cpt["ins. of"].to_list()[0]
 
     def dSeperation(self, X=list(), Y=list(), Z=list()):
+        """
+        Test if X and Y are dSeperated through Z
+
+        :param X: a list of nodes that compare to Y
+        :param Y: a list of nodes that compare to X
+        :param Z: a list of nodes to check for
+        :return: Bool stating wheather the X and Y are independent
+        """
         graph = self.bn.get_interaction_graph()
         [graph.remove_node(z) for z in Z]
         try:
@@ -240,80 +313,26 @@ class BNReasoner:
             return False
 
     def independence(self, X=list(), Y=list(), Z=list()):
+        """
+        indpendence testing for X and Y through Z, relies on dSeperation fucntion
+
+        :param X: a list of nodes that compare to Y
+        :param Y: a list of nodes that compare to X
+        :param Z: a list of nodes to check for
+        :return: Bool stating wheather the X and Y are independent
+        """
         return not self.dSeperation(X,Y,Z)
 
     def marginalization(self, cpt=pd.DataFrame(), sumFor=str()):
+        """
+        Marginalize the output by summing-out the cpt
+
+        :param cpt: a pandas dataframe containing the [[given] [given] [for] [p]]
+        :param sumFor: the value to sum for
+
+        :return: A cpt of [[x] [p]]
+        """
         if (False in cpt[sumFor].unique() and True not in cpt[sumFor].unique()) or (True in cpt[sumFor].unique() and False not in cpt[sumFor].unique()):
             return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index()
         else:
             return cpt.groupby([name for name in cpt.columns if name not in ([sumFor, "p"])]).sum().reset_index().drop(sumFor, axis=1)
-
-# def runAllQuestions():
-#     questions = {
-#         "Variable Elimination":[
-#             {"Q":["car"], 
-#             "e":{}}
-#         ],
-#         "MPE": [
-#             {"Q":[], 
-#             "e":{"rain":True, "sick":True, "partner-takes-car":False}}
-#         ],
-#         "MAP/Mar":
-#         [
-#         {"Q":["going-outside"], 
-#         "e":{"traffic":True, "car":True, "rain":True, "overslept":False}},
-#         {"Q":["stay-home"], 
-#         "e":{"party-last-night":False, "overslept":True, "arrive-on-time":True}},
-#         {"Q":["public-transport"], 
-#         "e":{"rain":True, "traffic":False}}
-#     ]}
-#     for algoType in questions:
-#         print(questions[algoType])
-#         if "Variable" in algoType:
-#             print(algoType)
-#             for question in questions[algoType]:
-#                 reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-#                 print(reasoner.variableElimination(query=question["Q"]))
-#         elif "MAP" in algoType:
-#             for question in questions[algoType]:
-#                 print(question)
-#                 for i in range(2):
-#                     if not i:
-#                         print("Marginal")
-#                         reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-#                         print(reasoner.marginalDistributions(query=question["Q"],evidence=question["e"]))
-#                     else:
-#                         print("MAP")
-#                         reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-#                         print(reasoner.map(query=question["Q"],evidence=question["e"]))
-#         else:
-#             print("MPE")
-#             for question in questions[algoType]:
-#                 reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-#                 print(reasoner.mpe(evidence=question["e"]))
-#         print("\n\n")
-# runAllQuestions()
-
-
-
-reasoner = BNReasoner("./testing/work-from-home-problem.BIFXML")
-# {'Q': ['arrive-on-time', 'public-transport', 'rain'], 'e': {'arrive-on-time': True, 'car': True, 'public-transport': True, 'rain': False, 'overslept': True, 'bike': True}}
-# {'Q': ['bike'], 'e': {'partner-takes-car': True, 'car': True, 'arrive-on-time': True, 'bike': False, 'stay-home': True, 'traffic': False}}, pr=True or='min-degree'
-# {'Q': ['arrive-on-time', 'going-outside'], 'e': {'bike': False, 'going-outside': False, 'traffic': True, 'overslept': False, 'partner-takes-car': True, 'party-last-night': True}} pr=False or='min-degree'
-# {'Q': ['arrive-on-time'], 'e': {'partner-takes-car': True}} pr=False or='min-fill'
-Q = ['arrive-on-time']
-e = {'partner-takes-car': True}
-ordering = 'min-fill'
-pruning = True
-print(reasoner.map(
-    query=Q, 
-    evidence=e,
-    pruning=pruning,
-    ordering=ordering)
-)
-print(reasoner.marginalDistributions(
-    query=Q, 
-    evidence=e,
-    pruning=pruning,
-    ordering=ordering)
-)

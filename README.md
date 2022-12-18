@@ -1,3 +1,9 @@
+## How to run the code
+All dry-run examples of the code can be found in testrun-all-functions.py. The outcomes of our scenario testing can be found under: queryAnswers.
+The code for the BNReasoner.py is ofcourse to be found the the BNReasoner.py
+For running and testing our code we used the notebook: testing.ipynb.
+Finally, the outcomes of our query questions can be found in the folder queryAnswers.
+
 # Useful Pointers for Assignment 2 of KR21
 
 ## BIFXML file format
